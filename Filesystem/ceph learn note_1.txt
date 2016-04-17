@@ -1,0 +1,117 @@
+10.1.50.250    admin-node
+10.1.240.125   node1        （监控节点）
+10.1.50.213    node2               （osd.0节点）
+10.1.50.252    node3                （osd.1节点）
+10.1.50.215    client-node         （客服端，主要利用它挂载ceph集群提供的存储进行测试）
+
+
+hostnamectl set-hostname    "新的名字"
+
+admin-node：
+echo 10.1.240.125   node1        >> /etc/hosts
+echo 10.1.50.213    node2        >> /etc/hosts
+echo 10.1.50.252    node3        >> /etc/hosts
+echo 10.1.50.215    client-node  >> /etc/hosts
+yum install ceph ceph-deploy ceph-radosgw redhat-lsb -y
+
+su ceph
+cd 
+ssh-keygen
+ssh-copy-id    ceph@node1
+ssh-copy-id    ceph@node2
+ssh-copy-id    ceph@node3
+ssh-copy-id    ceph@client-node
+
+echo Host    node1 >> ~/.ssh/config
+echo   Hostname   10.1.240.125 >> ~/.ssh/config
+echo   User              ceph >> ~/.ssh/config
+
+echo Host    node2 >> ~/.ssh/config
+echo   Hostname   10.1.50.213 >> ~/.ssh/config
+echo   User              ceph >> ~/.ssh/config
+
+echo Host    node3 >> ~/.ssh/config
+echo   Hostname   10.1.50.252  >> ~/.ssh/config
+echo   User              ceph >> ~/.ssh/config
+
+echo Host    10.1.50.215 >> ~/.ssh/config
+echo   Hostname   192.168.1.114 >> ~/.ssh/config
+echo   User              ceph >> ~/.ssh/config
+
+chmod 600 ~/.ssh/config
+
+
+
+All:
+yum install ceph ceph-radosgw redhat-lsb -y
+adduser -d /home/ceph -m ceph
+passwd ceph
+
+echo "ceph ALL = (root) NOPASSWD:ALL" | tee /etc/sudoers.d/ceph
+chmod 0440 /etc/sudoers.d/ceph
+sed -i 's/Defaults    requiretty/Defaults:ceph   !requiretty/g' /etc/sudoers
+
+systemctl stop firewall.service
+setenforce 0
+yum install yum-plugin-priorities deltarpm -y
+
+
+创建集群：
+ceph用户：
+mkdir  my-cluster
+cd my-cluster
+
+#监控节点
+ceph-deploy   new  node1   
+echo osd pool default size = 2 >> ceph.conf
+
+#安装ceph
+ceph-deploy install admin-node node1 node2 node3
+
+#初始化监控节点并收集keyring：
+ceph-deploy mon create-initial
+
+node2：
+mkdir  /var/local/osd0
+
+node3：
+mkdir  /var/local/osd1
+
+#开启其他节点osd进程，并激活
+ceph-deploy osd prepare node2:/var/local/osd0  node3:/var/local/osd1
+ceph-deploy osd activate  node2:/var/local/osd0  node3:/var/local/osd1
+
+查看一下 Ceph 存储节点的硬盘情况：
+ceph-deploy disk list node2
+
+把admin-node节点的配置文件与keyring同步至其它节点
+ceph-deploy admin admin-node node1 node2 node3
+sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+
+#测试
+ceph health
+
+部署client-node：
+ceph-deploy  install client-node
+ceph-deploy admin client-node
+
+创建块设备映像：
+rbd create foo --size 4096 
+
+将ceph提供的块设备映射到client-node:
+sudo rbd map foo --pool rbd --name client.admin
+
+创建文件系统
+sudo mkfs.ext4 -m0 /dev/rbd/rbd/foo
+
+挂载文件系统
+sudo mkdir /mnt/test
+sudo mount /dev/rbd/rbd/foo /mnt/test
+ls /mnt/test
+
+http://www.centoscn.com/CentosServer/test/2015/0521/5489.html
+
+以下两篇看一下
+http://www.centoscn.com/image-text/install/2015/0315/4890.html
+http://www.linuxidc.com/Linux/2015-08/120990.htm
+

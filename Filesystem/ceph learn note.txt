@@ -1,0 +1,235 @@
+https://github.com/ceph
+
+radosgw:存储系统
+MDSs: Ceph Metadata Server (MDS)
+RBD:块设备驱动
+RADOS (Reliable, Autonomic Distributed Object Store):分布式对象存储系统
+	两层映射关系:
+		 第一层映射将存储对象映射到一个PG(Placement Group)：PG是一组存储对象集合， 是复制和负载均衡的最基本单位。 一级映射pgid= hash(o) &m 的输入是对象标识o，以及掩码m，m限定系统内最大PG个数为2的整数次幂（实际上是三个参数，这里忽略副本个数r）
+		 第二层映射是基于CRUSH[4]（Controlled Replication Under Scalabe Hashing)哈希算法映射pg到多个OSD，这些OSD构成复制关系。
+
+
+元数据集群MDS， 分布式对象存储系统RADOS是Ceph最关键的两项技术。 其中RADOS是一个支持海量存储对象的分布式对象存储系统。 RADOS最大的特色是使用CRUSH算法维护存储对象与存储服务器的对应关系，并采用了无Master设计， 对象复制，集群扩容，数据迁移，故障检测和处理能复杂功能由OSD提供， 既避免了单点失败，又提升了集群扩展性。
+
+复制和一致性
+RADOS实现了三种复制方案：　primary-copy/chain/splay。 primary-copy方式下， 读写操作都发往primary，primary确定写操作的顺序并转发到所有其他副本，等到其他副本写操作完成之后， primary写本地对象， 然后返回ack到客户端。（由于存在并发访问可能性， 必须从primary读取数据，否则可能读到不一致数据）。 chain方式下， 类似Google文件系统， OSD构成一个链， 写请求发往第一个OSD， 该OSD执行写操作之后转发请求到后一个OSD，最后一个OSD完成写操作之后发送ack到客户端。 读请求发往最后一个OSD，保证读到的数据都有充足的副本。splay方式则更为复杂， 是chain和primary-copy的结合体。primary-copy是最常用的复制方式，
+
+Ceph的部署模式下主要包含以下几个类型的节点
+
+• Ceph OSDs: A Ceph OSD 进程主要用来存储数据，处理数据的replication,恢复，填充，调整资源组合以及通过检查其他OSD进程的心跳信息提供一些监控信息给Ceph Monitors . 当Ceph Storage Cluster 要准备2份数据备份时，要求至少有2个Ceph OSD进程的状态是active+clean状态 (Ceph 默认会提供两份数据备份).
+
+• Monitors: Ceph Monitor 维护了集群map的状态，主要包括monitor map, OSD map, Placement Group (PG) map, 以及CRUSH map. Ceph 维护了 Ceph Monitors, Ceph OSD Daemons, 以及PGs状态变化的历史记录 (called an “epoch”).Ceph 要求必须是奇数个监控节点，而且最少3个！（自己玩玩的话，1个也是可以的）
+
+• MDSs: Ceph Metadata Server (MDS)存储的元数据代表Ceph的文件系统 (i.e., Ceph Block Devices 以及Ceph Object Storage 不适用 MDS). Ceph Metadata Servers 让系统用户可以执行一些POSIX文件系统的基本命令，例如ls,find 等.
+
+10.1.50.150 admin-node 
+10.1.50.151 ceph-mon0
+10.1.50.152 ceph-mds0 
+10.1.50.153 ceph-osd0
+10.1.50.154 ceph-osd1
+10.1.50.155 client-node (客服端，主要利用它挂载ceph集群提供的存储进行测试)
+
+hostnamectl set-hostname admin-node
+hostnamectl set-hostname ceph-mon0
+hostnamectl set-hostname ceph-mds0 
+hostnamectl set-hostname ceph-osd0
+hostnamectl set-hostname ceph-osd1
+hostnamectl set-hostname client-node
+
+*/10 * * * * /usr/sbin/ntpdate us.pool.ntp.org
+
+ALL:
+	yum install ceph ceph-radosgw redhat-lsb yum-plugin-priorities deltarpm -y
+
+	echo 10.1.50.150 admin-node >> /etc/hosts
+	echo 10.1.50.151 ceph-mon0 >> /etc/hosts
+	echo 10.1.50.152 ceph-mds0 >> /etc/hosts
+	echo 10.1.50.153 ceph-osd0 >> /etc/hosts
+	echo 10.1.50.154 ceph-osd1 >> /etc/hosts
+	echo 10.1.50.155 client-node >> /etc/hosts
+	
+	adduser -d /home/ceph -m ceph
+	echo 123456 | passwd --stdin ceph	
+	echo "ceph ALL = (root) NOPASSWD:ALL" | tee /etc/sudoers.d/ceph
+	chmod 0440 /etc/sudoers.d/ceph
+	sed -i 's/Defaults    requiretty/Defaults:ceph   !requiretty/g' /etc/sudoers
+
+	systemctl stop firewall.service
+	setenforce 0
+	
+admin:
+	yum install ceph-deploy -y
+	
+	su ceph
+	cd
+	ssh-keygen
+	ssh-copy-id ceph-mon0
+	ssh-copy-id ceph-mds0
+	ssh-copy-id ceph-osd0
+	ssh-copy-id ceph-osd1
+	ssh-copy-id client-node
+	
+	echo "Host    ceph-mon0" >> ~/.ssh/config
+	echo "  Hostname   10.1.50.151" >> ~/.ssh/config
+	echo "  User       ceph" >> ~/.ssh/config
+	
+	echo "Host    ceph-mds0" >> ~/.ssh/config
+	echo "  Hostname   10.1.50.152" >> ~/.ssh/config
+	echo "  User       ceph" >> ~/.ssh/config
+	
+	echo "Host    ceph-osd0" >> ~/.ssh/config
+	echo "  Hostname   10.1.50.153" >> ~/.ssh/config
+	echo "  User       ceph" >> ~/.ssh/config
+	
+	echo "Host    ceph-osd1" >> ~/.ssh/config
+	echo "  Hostname   10.1.50.154" >> ~/.ssh/config
+	echo "  User       ceph" >> ~/.ssh/config
+	
+	echo "Host    client-node" >> ~/.ssh/config
+	echo "  Hostname   10.1.50.155" >> ~/.ssh/config
+	echo "  User       ceph" >> ~/.ssh/config
+	
+	chmod 600 ~/.ssh/config
+	
+	#创建集群
+	mkdir  my-cluster
+	cd my-cluster
+	
+	#安装ceph(可省略)
+	ceph-deploy install admin-node ceph-mon0 ceph-osd0 ceph-osd1
+	
+	#创建监控节点
+	ceph-deploy new ceph-mon0   
+	echo osd pool default size = 2 >> ceph.conf
+
+	#初始化监控节点并收集keyring：
+	ceph-deploy mon create-initial
+
+	ceph-osd0：
+		mkdir /var/local/osd0
+
+	ceph-osd1：
+		mkdir /var/local/osd1
+
+	#开启其他节点osd进程，并激活
+	ceph-deploy osd prepare ceph-osd0:/var/local/osd0 ceph-osd1:/var/local/osd1
+	ceph-deploy osd activate ceph-osd0:/var/local/osd0 ceph-osd1:/var/local/osd1  <=> ceph-disk activate all
+	
+	#把admin-node节点的配置文件与keyring同步至其它节点
+	ceph-deploy admin admin-node ceph-mon0 ceph-osd0 ceph-osd1
+	sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+
+	查看一下 Ceph 存储节点的硬盘情况：
+	ceph-deploy disk list ceph-osd0
+	ceph-deploy disk list ceph-osd1
+
+	#在mds机器上创建一个元数据服务器mds (什么用？)
+	ceph-deploy mds create ceph-mds0
+	
+Ceph存储空间使用：
+部署client-node：
+	admin:
+		ceph-deploy install client-node
+		ceph-deploy admin client-node
+
+	ceph-client：
+		创建块设备映像：
+		rbd create foo --size 4096 
+		
+		将ceph提供的块设备映射到client-node:
+		sudo rbd map foo --pool rbd --name client.admin
+		
+		ceph osd lspools
+		ceph osd pool get data pg_num
+		ceph osd pool get data pgp_num
+
+		创建文件系统
+		sudo mkfs.ext4 -m0 /dev/rbd/rbd/foo
+		
+		挂载文件系统
+		sudo mkdir /mnt/test
+		sudo mount /dev/rbd/rbd/foo /mnt/test
+		ls /mnt/test
+
+http://www.centoscn.com/CentosServer/test/2015/0521/5489.html
+http://blog.csdn.net/it_yuan/article/details/8966065
+
+以下两篇看一下
+http://www.centoscn.com/image-text/install/2015/0315/4890.html
+http://www.linuxidc.com/Linux/2015-08/120990.htm
+
+
+部署过程中如果出现任何奇怪的问题无法解决，可以简单的删除一切从头再来：
+sudo stop ceph-all 
+ceph-deploy uninstall  [{ceph-node}] 
+ceph-deploy purge ceph-mon1 ceph-osd0 ceph-osd1
+ceph-deploy purgedata ceph-mon1 ceph-osd0 ceph-osd1
+ceph-deploy forgetkeys
+
+#可以给pool创建镜像
+
+pg计算公式:
+Total PGs = (#OSDs * 100) / pool size
+Ceph 官方推荐取最接近2的指数倍，不能整除的可以稍微加点。
+http://ceph.com/pgcalc/#userconsent
+
+常用命令：
+http://blog.csdn.net/hero9881010love/article/details/43154627
+
+#存2进制
+ceph osd getcrushmap -o test
+#2进制转文本
+crushtool -d test -o test1
+#文本转2进制
+crushtool -d test1 -o test2
+#导入集群
+ceph osd setcrushmap -i test2
+
+ceph mds stat
+
+ceph osd tree
+ceph osd dump 
+ceph osd perf
+ceph osd df
+ceph osd down 0 #osd.0 节点
+ceph osd rm 0 #
+ceph osd pool set rbd pg_num 3000
+
+ceph osd pool create cephfs_data 10
+ceph osd pool create cephfs_metadata 10
+ceph fs new leadorfs cephfs_metadata cephfs_data
+
+rbd showmapped 
+
+#选举情况
+ceph quorum_status
+
+#查看ceph的实时运行状态
+ceph -w
+
+#查看认证
+ceph auth list
+ceph auth del osd.0
+
+# 验证monitor是否安装成功
+ceph -s <=> ceph mon_status
+	
+#测试
+ceph health
+ceph health detail
+
+以下两种挂载方式:(没试过)
+通过Kernel Driver的形式挂载：
+	mount -t ceph 192.168.40.107:6789:/ /mnt/mycephfs
+	mount -t ceph 192.168.40.107:6789:/ /mnt/mycephfs -o name=admin,secretfile=admin.secret
+
+通过User Space (FUSE)的形式挂载：
+	yum install -y ceph-fuse
+	ceph-fuse -m 192.168.40.107:6789 ~/mycephfs
+	ceph-fuse -k ./ceph.client.admin.keyring -m 192.168.40.107:6789 ~/mycephfs
+
+创建 osd 存储节点 硬盘:(没试过)
+ceph-deploy disk zap ceph-osd1:sd{b,c}   格式化osd0上的sdb盘为xfs
+ceph-deploy osd create ceph-osd1:sda:/dev/sdc1
+ceph-deploy osd create osd1:sd{b,c}
+

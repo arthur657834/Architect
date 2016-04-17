@@ -1,0 +1,48 @@
+http://blog.csdn.net/it_yuan/article/details/8959380
+http://blog.csdn.net/it_yuan/article/details/8966065
+http://blog.csdn.net/it_yuan/article/details/8980849
+
+Ceph是一个开源的PB级文件系统， 最早是加州大学Santa Cruz分校的一个研究项目，  项目创始人sage weil是该校的一名博士。 ceph包括一个兼容POSIX的分布式文件CephFS， 一个分布式对象存储系统RADOS(Reliable Autonomic Distributed Object Storage)， 并基于RADOS实现了一个且兼容Swift和S3的存储系统radosgw，以及一个块设备驱动RBD。根据官网介绍， RADOS/radosgw/RBD比较稳定， CephFS还不足以应用到产品环境，此外Ceph稳定性受到btrfs限制。linux内核2.6.34版本开始包含ceph client， 这说明ceph已经得到开源社区的认可，发展前景看好。
+
+元数据集群MDS， 分布式对象存储系统RADOS是Ceph最关键的两项技术。 其中RADOS是一个支持海量存储对象的分布式对象存储系统。 RADOS最大的特色是使用CRUSH算法维护存储对象与存储服务器的对应关系，并采用了无Master设计， 对象复制，集群扩容，数据迁移，故障检测和处理能复杂功能由OSD提供， 既避免了单点失败，又提升了集群扩展性。
+
+RADOS采用两层映射关系， 第一层映射将存储对象映射到一个PG(Placement Group)， PG是一组存储对象集合， 是复制和负载均衡的最基本单位。 一级映射pgid= hash(o) &m 的输入是对象标识o，以及掩码m，m限定系统内最大PG个数为2的整数次幂（实际上是三个参数，这里忽略副本个数r）。虽然限定了最大PG个数，但是不对系统扩容造成影响， 原因是PG可以一分为二。但是同时将所有PG分裂造成大量数据迁移，为避免这种情况，使用类似linear hashing的方式对一级映射做了修正,  允许每次只分裂一个PG， 可以实现渐进式扩容。
+第二层映射是基于CRUSH[4]（Controlled Replication Under Scalabe Hashing)哈希算法映射pg到多个OSD，  这些OSD构成复制关系。CRUSH的输入是cluster map， placement rule， 以及 pgid， 其中cluster map描述集群中所有OSD信息、状态及其逻辑关系，placement rule限定了副本个数，以及副本放置规则，例如所有副本必须放在不同机架。 与普通哈希不同，CRUSH较为稳定， 增加或者减少OSD， 不会导致大量数据迁移， 此外CRUSH允许根据OSD存储能力，设定权重。
+以PG作为复制和负载均衡的基本单位，有两个好处，一是有效减小复制的管理难度，二是对错误进行一定程度隔离（一个OSD故障影响到有限个其他OSD）。 当然，为了保证数据可靠性， 必须控制PG大小，提搞恢复并行度， 保证集群内部有充足的资源参与恢复。
+
+基于PG和CRUSH的存储对象定位方式是RADOS比较重要的一个创新点， 无须全局维护对象到OSD之间的映射关系，  集群中任何服务器，无论是client异或是OSD， 均能独立完成数据定位。 主要优势有： 1）元数据小， 支持海量小文件存储， 系统扩展性非常好； 2） 支持对等集群， 将复制， 故障检测， 故障处理交给智能OSD处理； 3）算法较为灵活， 能支持权重和placment rule。不足之处有：　1） 负载均衡不够灵活，服务器性能差异较大时，难以设置合理的权重； 2) 新节点加入集群时，必须迁移数据。
+
+集群成员关系
+
+cluster map是描述OSD状态信息以及集群拓扑结构的元数据信息。  OSD状态涉及up/down和in/out两个维度， up/down表示OSD是否工作正常， in/out表示OSD是否包含有效数据。<up,in>状态表示OSD工作正常且包含有效的PG， <up, out>表示OSD工作正常，但是尚未包含任何有效PG（有点类似hot spare）， <down, in>表示OSD临时性故障，<down, out>代表节点永久性故障。 OSD通过相互发送心跳消息检测故障， 故障信息汇报到高可用的monitor集群，由 monitor来修改cluster map。 理论上两个节点有可能同时汇报对方故障，不知monitor是如何处理这种情况的。
+
+cluster map是数据定位的关键数据结构， 因此复制到所有client和OSD上。 cluster map带一个版本号信息epoch， 请求和响应中带有epoch信息，用于验证校验请求方和响应方看到一致的cluster map， 当epoch不匹配时， 请求失败，并且epoch较大的一方发送cluser map增量更新到epoch较小的一方。  由于存在复制关系的OSD之间定期发送心跳消息， cluster map能够迅速扩散到整个集群。
+
+
+
+复制和一致性
+RADOS实现了三种复制方案：　primary-copy/chain/splay。 primary-copy方式下， 读写操作都发往primary，primary确定写操作的顺序并转发到所有其他副本，等到其他副本写操作完成之后， primary写本地对象， 然后返回ack到客户端。（由于存在并发访问可能性， 必须从primary读取数据，否则可能读到不一致数据）。 chain方式下， 类似Google文件系统， OSD构成一个链， 写请求发往第一个OSD， 该OSD执行写操作之后转发请求到后一个OSD，最后一个OSD完成写操作之后发送ack到客户端。 读请求发往最后一个OSD，保证读到的数据都有充足的副本。splay方式则更为复杂， 是chain和primary-copy的结合体。primary-copy是最常用的复制方式，因此本文只关注这种方式。
+
+RADOS基于版本和日志实现副本一致性。每个存储对象对应一个版本(epoch, v)，其中epoch是cluster map版本， v是递增的数字，每次写操作都会增加v。PG也对应一个最后更新版本last_update， last_update等于PG中最新修改对象的版本。每个PG都记录近期更新日志，日志项包括存储对象名，操作类型，版本对象版本和客户端标识。在RADOS中， 一次更新操作涉及写log， 修改版本，修改数据几个动作， EOBFS通过事务保证log与数据的一致性。
+
+写操作过程跳过不可用的副本，这可能导致不一致，   一致性恢复分为两个阶段： 第一个阶段是peering。 这一阶段的目的是让所有副本得到PG最新状态， 所有相关OSD向primary汇报最近一段时间的log， primary汇集自上次peering以来的所有更新日志，并将增量日志发往所有其他副本。第一阶段阻塞读写请求， 一般来说peering较为轻量级， 对可用性影响不算大。 第二个阶段是恢复阶段， primary根据各副本状态从其他副本拷贝存储对象或者发送存储对象到其他副本。恢复阶段与应用IO可以并行，若 应用访问了primary中待恢复的存储对象， 则将对象恢复优先级提高， 并阻塞请求指导该对象恢复完成。
+
+RADOS只保存也只能保存最近一段时间内的更新， 新节点加入集群或者节点永久性故障时，  某些副本需要从零开始全量恢复，解决办法是扫描PG内所有存储对象，生成backlog，根据backlog和近期log完成恢复。
+
+读写请求带有epoch， 只有epoch匹配时才允许更新，若不匹配响应方返回cluster map增量更新，请求方重新确定副本位置。 只要参与更新的OSD和client具有相同的epoch，即使这个epoch与cluster map最新epoch不同 更新也能成功， 也能保证一致性，原因是此时新的primary还没开始peering， 不会产生丢失更新问题。
+
+读操作的一致性难以保证， 譬如网络故障情况将某个client和primary于其他副本隔离，而且primary已经被cluster map标记为down，由于primary和client之间的网络是正常的，  该client的读请求总是能执行成功。 为了尽可能降低这种情况出现， primary和其他副本之间定期发送心跳， 若primary一段时间未接收到其他副本的心跳消息，则阻塞读操作。 虽然读操作存在不一致，但是产生的概率比较小， 实际上，只要这段时间内单个存储对象上没有读写并发， 则读操作还是能保证一致。
+
+关于复制和一致性， 几个问题不甚清楚： 
+1） 读写必须有primary参与，primary出错时，如何保证可用性？ 是否等到primary故障被检测到，并且新的primary完成peering之后才允许读写，不可用时长是多少？
+2） 写操作遇到epoch不匹配时如何处理？  譬如， primary先写成功了第二个副本， 而写第三个副本时发现epoch不匹配。 primary拿到新的cluster map之后，是否需要撤销第二个副本的更新？ 怎么保证一致性？
+3） peering时遇到全量恢复情况，可用性是否受较大影响？
+
+
+
+存储
+如上所述， RADOS通过对象版本和操作日志修复副本一致性，  这种做法能够提高修复效率，以及系统可用性，但也对单机存储系统提出更高要求： 日志， 对象版本， 对象数据必须保持一致。 
+
+RADOS原生的本地存储系统EBOFS(Extent and B-Tree based Object File System)， 是基于Extent和B-Tree的单机对象存储系统， 提供类似文件系统的对象访问接口， 对象归属于一个或者多个collection， 对象和collection拥有多个attribute/value元数据。Extent是连续的一段存储空间， 基于Extent分配和管理空闲空， 可以降低元数据数据量，降低数据碎片，提高数据的连续性， 提升IO效率。使用COW技术处理更新， 能够保证磁盘数据一致性， 降低宕机恢复难度。 EBOFS先在内存做更新，再异步写回磁盘。 基于COW和内存更新，EOBFS 实现了事务功能， 能够保证对象，对象版本， PG last_update, PG操作日志之间的一致性。此外EBOFS提供了journal功能， journal存储于NVRAM， 用于对持久化要求较高的应用。 
+
+Btrfs是一个基于COW B-Tree的文件系统，   Btrfs功能比EBOFS更为强大(支持文件数据COW，同时文件元数据不必全部装入内存)，2.6.29之后btrfs已经进入linux内核mainline。 为了避免重复发明轮子， 官方文档推荐使用btrfs作为ceph的本地存储系统。 不清楚btrfs是否提供类似EBOFS的事务特性。
