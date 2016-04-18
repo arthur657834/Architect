@@ -5,6 +5,10 @@ cd liberasurecode-1.1.0
 ./configure
 make
 make install
+
+#还是yum好用
+yum -y install ftp://ftp.muug.mb.ca/mirror/centos/7.2.1511/cloud/x86_64/openstack-liberty/common/liberasurecode-1.0.9-3.el7.x86_64.rpm ftp://ftp.muug.mb.ca/mirror/centos/7.2.1511/cloud/x86_64/openstack-liberty/common/liberasurecode-devel-1.0.9-3.el7.x86_64.rpm
+
 yum -y install python34-setuptools
 pip install distribute
 pip install --upgrade setuptools
@@ -80,6 +84,63 @@ sudo systemctl start rsyncd.service
 测试
 rsync rsync://pub@localhost/
 
+
+systemctl enable memcached.service
+systemctl start memcached.service
+
+cp $HOME/swift/doc/saio/rsyslog.d/10-swift.conf /etc/rsyslog.d/
+
+vi /etc/rsyslog.conf
++ $PrivDropToGroup adm
+
+mkdir -p /var/log/swift/hourly
+mkdir -p /var/log/swift
+
+chown -R root:adm /var/log/swift
+chmod -R g+w /var/log/swift
+systemctl restart rsyslog.service
+
+
+rm -rf /etc/swift
+cd $HOME/swift/doc; sudo cp -r saio/swift /etc/swift; cd -
+chown -R ${USER}:${USER} /etc/swift
+find /etc/swift/ -name \*.conf | xargs sudo sed -i "s/<your-user-name>/${USER}/"
+
+
+mkdir -p $HOME/bin
+cd $HOME/swift/doc; cp saio/bin/* $HOME/bin; cd -
+chmod +x $HOME/bin/*
+
+echo "export SAIO_BLOCK_DEVICE=/srv/swift-disk" >> $HOME/.bashrc
+sed -i "/find \/var\/log\/swift/d" $HOME/bin/resetswift
+cp $HOME/swift/test/sample.conf /etc/swift/test.conf
+
+
+echo "export SWIFT_TEST_CONFIG_FILE=/etc/swift/test.conf" >> $HOME/.bashrc
+
+. $HOME/.bashrc
+
+remakerings
+
+#Verify the unit tests run:
+$HOME/swift/.unittests 
+
+startmain
+
+curl -v -H 'X-Storage-User: test:tester' -H 'X-Storage-Pass: testing' http://127.0.0.1:8080/auth/v1.0
+curl -v -H 'X-Auth-Token: <token-from-x-auth-token-above>' <url-from-x-storage-url-above>
+
+curl -v -H 'X-Auth-Token: AUTH_tk40e95076adba407c82396ea0309b97e3' http://127.0.0.1:8080/v1/AUTH_test
+
+
+
+
+swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing stat
+
+$HOME/swift/.functests
+
+
+$HOME/swift/.probetests
 
 
 
