@@ -58,5 +58,29 @@ pip install -r test-requirements.txt
 python setup.py develop
 
 
+vi /etc/xinetd.d/rsync
+service rsync
+{
+        disable = no
+        socket_type     = stream
+        wait            = no
+        user            = root
+        server          = /usr/bin/rsync
+        server_args     = --daemon
+        log_on_failure  += USERID
+}
+
+sudo cp $HOME/swift/doc/saio/rsyncd.conf /etc/
+sudo sed -i "s/<your-user-name>/${USER}/" /etc/rsyncd.conf
+
+sudo systemctl restart xinetd.service
+sudo systemctl enable rsyncd.service
+sudo systemctl start rsyncd.service
+
+测试
+rsync rsync://pub@localhost/
+
+
+
 
 
