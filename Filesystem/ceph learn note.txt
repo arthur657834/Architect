@@ -118,6 +118,8 @@ admin:
 	#把admin-node节点的配置文件与keyring同步至其它节点
 	ceph-deploy admin admin-node ceph-mon0 ceph-osd0 ceph-osd1
 	sudo chmod +r /etc/ceph/ceph.client.admin.keyring
+	#单独同步配置文件
+	ceph-deploy config push nc{1,3}
 
 	查看一下 Ceph 存储节点的硬盘情况：
 	ceph-deploy disk list ceph-osd0
@@ -185,7 +187,9 @@ crushtool -d test1 -o test2
 #导入集群
 ceph osd setcrushmap -i test2
 
+cephdeploy --overwrite-conf mds create nc{1..3}
 ceph mds stat
+ceph mds dump
 
 ceph osd tree
 ceph osd dump 
@@ -218,6 +222,25 @@ ceph -s <=> ceph mon_status
 ceph health
 ceph health detail
 
+#crush 规则支持类型如下 ;
+# types
+type 0 osd
+type 1 host
+type 2 chassis
+type 3 type
+type 4 row
+type 5 pdu
+type 6 pod
+type 7 room
+type 8 datacenter
+type 9 region
+type 10 root
+
+ceph osd crush add-bucket RACKA01 rack
+ceph osd crush move cs1 rack=RACKA01
+
+
+
 以下两种挂载方式:(没试过)
 通过Kernel Driver的形式挂载：
 	mount -t ceph 192.168.40.107:6789:/ /mnt/mycephfs
@@ -232,4 +255,41 @@ ceph health detail
 ceph-deploy disk zap ceph-osd1:sd{b,c}   格式化osd0上的sdb盘为xfs
 ceph-deploy osd create ceph-osd1:sda:/dev/sdc1
 ceph-deploy osd create osd1:sd{b,c}
+
+rados lspools
+rados df
+#性能测试
+rados bench 600 write rand -t 100 -b 4k -p datapool
+
+ceph pg dump
+
+rdb create -p test --size 10000 kjh
+rdb ls test
+rdb -p test info kjh(--image kjh)
+rbd rm -p test kjh
+rdb resize -p test --size 2000 kjh
+
+rdb pool 快照功能测试
+ceph osd pool create ptminpool 256 256
+rbd create kjhimage --size 1024 --pool ptminpool
+rbd --pool ptminpool
+rdb snap create ptminpool/kjhimage@snapkjhimage
+rdb snap ls ptminpool/kjhimage
+rbd snap rollback ptmindpool/kjhimage@snapkjhimage
+rbd snap rm ptmindpool/kjhimage@snapkjhimage
+rbd snap purge ptmindpool/kjhimage
+rbd export -p ptmindpool --image kjhimage /tmp/kjhimage.img
+rdb import /tmp/kjhimage.img -p ptmindpool --image importmyimage1
+rdb p ptmindpool ls
+
+
+
+
+
+
+
+
+
+
+
 
