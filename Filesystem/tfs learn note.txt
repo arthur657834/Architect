@@ -1,0 +1,437 @@
+http://www.linuxidc.com/Linux/2012-08/67500p3.htm
+http://code.taobao.org/p/tfs/wiki/get/
+
+1.yum -y install cmake gtest pcre pcre-devel readline-devel gperftools-devel libunwind-devel readline gperftools libunwind automake autoconfig libtool gtest libuuid-devel glibc-devel.i686 jemalloc*
+ 
+yum -y install http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+yum -y install  mysql-community-devel
+
+2.gcc 降级
+gcc-4.1.2
+./configure --prefix=/usr/local/gcc-4.1.2
+make
+make install
+
+mv /usr/bin/g++ /usr/bin/g++.bak
+cp /usr/local/gcc-4.1.2/bin/g++ /usr/bin/
+
+mv /usr/bin/gcc /usr/bin/gcc.bak
+cp /usr/local/gcc-4.1.2/bin/gcc /usr/bin/
+
+export LD_LIBRARY_PATH=/usr/local/gcc-4.1.2/lib
+
+
+3.安装yajl
+http://lloyd.github.io/yajl/
+编译成功之后
+ln -s /usr/local/lib/libyajl.so.2 /lib64/libyajl.so.2
+
+4.安装tb-common-utils
+export TBLIB_ROOT=/usr/local/tb-common-utils-lib
+svn checkout -r 18 http://code.taobao.org/svn/tb-common-utils/trunk/ tb-common-utils
+cd tb-common-utils
+build.sh进
+
+5.安装tfs
+svn co http://code.taobao.org/svn/tfs/tags/release-2.2.16
+cd /root/release-2.2.16/
+sh build.sh init
+./configure --prefix=/usr/local/tfs --with-release=yes --without-tcmalloc
+make
+make install
+
+cp /root/release-2.2.16/conf/*conf ./
+
+vi ns.conf
+[public]
+#log file size default 1GB
+log_size=1073741824
+
+#log file num default 64
+log_num = 64 
+
+#log file level default debug
+log_level=info
+
+#main queue size default 10240
+task_max_queue_size = 10240
+
+#listen port
+port = 8100
+
+#work directoy
+work_dir=/usr/local/tfs
+
+#device name
+dev_name= eth0
+
+#work thread count default 4
+thread_count =32 
+
+#ip addr(vip)
+ip_addr = 10.1.240.124
+
+[nameserver]
+
+safe_mode_time = 360
+
+ip_addr_list = 10.1.240.124|192.168.0.2
+
+group_mask = 255.255.255.255
+
+#second
+max_write_timeout = 3
+
+#max_task_in_machine_nums = 14
+
+#cleanup_write_timeout_threshold = 40960
+
+# cluster id defalut 1
+cluster_id = 1 
+
+# block use ratio
+block_max_use_ratio = 98
+
+# bytes
+block_max_size = 5497472 
+
+#
+max_replication = 1 
+
+# block lost, replicate ratio
+replicate_ratio = 50
+
+max_write_filecount = 64 
+
+# use capacity ratio
+use_capacity_ratio = 96
+
+#heart interval time(seconds)
+heart_interval = 4
+
+# object dead max time(seconds) default
+object_dead_max_time = 300
+
+#
+object_clear_max_time = 180 
+
+heart_thread_count = 4 
+
+heart_max_queue_size = 2048
+
+report_block_thread_count = 6
+
+report_block_max_queue_size = 32
+
+report_block_hour_range = 2~4
+
+#day
+report_block_time_interval = 1
+
+#heart_interval * 2
+#report_block_expired_time = 4
+
+#replicate block wait time
+repl_wait_time = 180
+
+compact_delete_ratio =  10  
+
+compact_max_load = 200
+
+compact_hour_range = 1~10
+
+dump_stat_info_interval = 60000000 
+
+balance_percent = 0.05
+
+add_primary_block_count = 3
+
+task_percent_sec_size = 200 
+
+oplog_sync_max_slots_num = 1024
+
+oplog_sync_thread_num = 1
+
+group_count = 1
+
+group_seq  = 0
+
+discard_newblk_safe_mode_time = 360 
+
+choose_target_server_random_max_num = 128
+
+#task_expired_time = 120
+
+vi  ads.conf 
+[public]
+#log file size default 1GB
+log_size=1073741824
+
+#log file num default 64
+log_num = 64 
+
+#log file level default debug
+log_level=debug
+
+#main queue size default 10240
+task_max_queue_size = 10240
+
+#listen port
+port = 12000
+
+#work directoy
+work_dir=/usr/local/tfs
+
+#device name
+dev_name= eth0
+
+#work thread count default 4
+thread_count = 4
+
+ip_addr = 10.1.240.124
+
+[adminserver]
+
+# check interval
+check_interval = 5
+# check count
+check_count = 5
+# warn threshhold
+warn_dead_count = 3
+# wait time before kill ds
+ds_fkill_waittime = 15
+# ds start base cmd
+ds_script = /home/admin/tfs/bin/dataserver -f /home/admin/tfs/conf/ds.conf -d
+# ds index list
+ds_index_list = 1,2,3
+
+[nameserver]
+
+ip_addr = 10.1.240.124
+port = 8100
+
+[dataserver]
+
+port = 8200
+lock_file = /home/admin/tfs/logs/dataserver
+mount_name = /data/disk
+
+
+vi ds.conf 
+[public]
+#log file size default 1GB
+log_size=1073741824
+
+#log file num default 64
+log_num = 64 
+
+#log file level default debug
+log_level=info
+
+#main queue size default 10240
+task_max_queue_size = 10240
+
+#listen port
+port = 8200 
+
+#work directoy
+work_dir=/usr/local/tfs
+
+#device name
+dev_name= eth0
+
+#work thread count default 4
+thread_count = 32 
+
+#ip addr
+ip_addr = 10.1.240.124
+
+[dataserver]
+
+#nameserver ip addr(vip)
+ip_addr = 10.1.240.124
+
+ip_addr_list = 10.1.240.124|192.168.0.2 
+
+#nameserver port
+port = 8100
+
+# slave cluster ns ip:port
+# slave_nsip = 192.168.0.10:8100
+
+#heart interval time(seconds)
+heart_interval = 2
+
+check_interval = 2
+
+#expire_datafile_time = 90
+
+#expire_clonedblock_time = 180
+
+#expire_compactblock_time = 600
+
+replicate_threadcount = 1
+
+#write_sync_flag = 1
+
+block_max_size = 75497472 
+
+dump_visit_stat_interval = 60
+
+#max_io_warning_time = 0
+
+backup_type = 1
+
+#backup_path = /home/admin/tfs
+
+#max_data_file_nums = 50
+
+#max_crc_error_nums = 4
+
+#max_eio_error_nums_ = 6
+
+#expire_checkblock_time = 86000
+
+#max_cpu_usage = 60
+
+#dump_stat_info_interval = 60000000
+
+mount_name = /data/disk
+
+# KB
+mount_maxsize = 10227000
+
+base_filesystem_type = 1
+
+superblock_reserve = 0
+
+# bytes
+avg_file_size = 15360
+
+# bytes
+mainblock_size = 5497472 
+
+# bytes
+extblock_size = 4194304
+
+block_ratio = 0.5
+
+hash_slot_ratio = 0.5
+
+启动nameserver：
+./tfs start_ns 
+
+启动data server：
+	添加硬盘
+	mkfs.ext4 /dev/sdb1
+	mount /dev/sdb1 /data/disk2
+	
+	vi /etc/fstab
+	/dev/sdb1                /data/disk2              ext4    defaults        1 2
+	
+	./stfs format 1
+	
+	./tfs start_ds 1(./tfs start_ds 2,4-6)
+
+连接测试：
+	 /usr/local/tfs/bin/ssm -s 10.1.2401.24:8100  
+		server -b    \\随即列出dataserver的block块
+		server -w     \\随机列出dataserver的可写块 
+		machine -a   \\列出dataserver的使用报道。
+		
+		ssm -s ns_ip:port -i "server" 或者
+		ssm -s ns_ip:port -i "machine"
+		
+用tfstool上传一张图片：
+“客户端首先向nameserver发起写请求，nameserver需要根据dataserver上的可写块，容量和负载加权平均来选择一个可写的 block。并且在该block所在的多个dataserver中选择一个作为写入的master，这个选择过程也需要根据dataserver的负载以 及当前作为master的次数来计算，使得每个dataserver作为master的机会均等。master一段选定，除非master宕机，不会更 换，一旦master宕机，需要在剩余的dataserver中选择新的master。返回一个dataserver列表。
+客户端向master dataserver开始数据写入操作。master server将数据传输为其他的dataserver节点，只有当所有dataserver节点写入均成功时，master server才会向nameserver和客户端返回操作成功的信息。“
+
+也就是说客户端发起一个请求，nameserver先根据dataserver的 容量和负载 来选择一个dataserver来做为所有dataserver的master(除非master宕机，不会更换，宕机则自动重新选择)然后根据ns.conf的配置的备份数全部写入，才向nameserver和客户端返回操作成功信息。
+
+/usr/local/tfs/bin/tfstool -s 10.1.240.124:8100
+	put /root/1.jpg
+
+读取返回信息中的Block ID和block中的File ID
+/ust/local/tfs/bin/ds_client -d 10.1.240.124:8200
+	list_file Block ID
+	read_file_data  Block ID 1 /tmp/test1.jpg
+
+6.安装nginx-tfs
+git clone https://github.com/alibaba/nginx-tfs.git
+下载在tengine-2.0.0(高版本编译不通过)
+./configure --add-module=/root/nginx-tfs
+make
+make install
+
+vi nginx.conf
+# cat /usr/local/nginx/conf/nginx.conf
+user  nobody;
+worker_processes  2;
+  
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+error_log  logs/error.log  info;
+  
+pid        logs/nginx.pid;
+  
+  
+events {
+    worker_connections  10240;
+}
+  
+  
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+  
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+  
+    #access_log  logs/access.log  main;
+  
+    sendfile        on;
+    #tcp_nopush     on;
+  
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+  
+    gzip  on;
+  
+  
+    tfs_upstream tfs_rc {
+        server 10.1.240.124:8100;
+        type ns;
+        rcs_zone name=tfs1 size=128M;
+        rcs_interface eth0;
+        rcs_heartbeat lock_file=/usr/local/nginx/logs/lk.file interval=10s;
+    }
+  
+    server {
+          listen       80;
+          server_name  localhost;
+  
+          tfs_keepalive max_cached=100 bucket_count=10;
+          #tfs_log "pipe:/usr/local/cronolog/sbin/ -p 30min /path/to/nginx/logs/cronolog/%Y/%m/%Y-%m-%d-%H-%M-tfs_access.log";
+  
+          location / {
+              tfs_pass tfs://tfs_rc;
+          }
+    }
+}
+
+API接口测试
+细节参看这里：https://github.com/alibaba/nginx-tfs/blob/master/TFS_RESTful_API.markdown
+
+
+模拟POST上传一个图片：
+curl --data-binary @/root/1.jpg http://10.1.240.124:80/v1/tfs?suffix=.jpg\&simple_name=0
+
+返回信息：
+{
+"TFS_FILE_NAME": "T1iRJTByJT1RXrhCrK"
+}
+
+浏览器打开查看
+http://10.1.240.124:80/v1/tfs/T1iRJTByJT1RXrhCrK.jpg(tfs三个字符可以用任意字符代替，例如一个空格字符，或者aaaa,bbb等，但至少需要存在一个字符)
+
