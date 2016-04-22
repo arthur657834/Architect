@@ -469,6 +469,8 @@ ip_addr = 10.1.240.124:3500
 
 ./tfs start_meta
 
+#rc 后端数据库信息，格式为“ip:port:dbname,dbuser,dbpasswd”，有分库时用;分割 
+meta_db_infos = 10.11.12.12:1234:tfs_name_db,root,root;10.11.12.12:1234:tfs_name_db,root,root
 
 6.安装nginx-tfs
 git clone https://github.com/alibaba/nginx-tfs.git
