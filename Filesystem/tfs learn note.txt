@@ -397,7 +397,51 @@ TFS>  put /root/install.log .txt tfs1
 TFS> get T1ERxTByJT1RXrhCrK /home/qwemgh.log tfs1 
  
  
- 
+ vi rs.conf
+[public]
+#log file size default 1GB
+log_size=1073741824
+
+#log file num default 64
+log_num = 64
+
+#log file level default debug
+log_level=debug
+
+#main queue size default 10240
+task_max_queue_size = 10240
+
+#listen port
+port =3500
+
+#work directoy
+work_dir=/usr/local/tfs
+
+#device name
+dev_name= eth0
+
+#work thread count default 4
+thread_count = 4
+
+#ip addr(vip)
+ip_addr = 10.1.240.124
+[rootserver]
+
+ip_addr_list=10.1.240.124|192.168.0.1
+
+safe_mode_time = 3
+
+mts_rts_lease_expired_time = 2
+
+mts_rts_lease_interval  = 1
+
+rts_rts_lease_expired_time = 2
+
+rts_rts_lease_interval  = 1
+
+table_file_path = /usr/local/tfs
+
+./tfs start_rs
 
 
 6.安装nginx-tfs
