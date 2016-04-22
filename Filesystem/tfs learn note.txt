@@ -443,6 +443,32 @@ table_file_path = /usr/local/tfs
 
 ./tfs start_rs
 
+vi meta.conf 
+[public]
+log_level = debug
+log_num = 20
+log_size = 134217728
+work_dir = /home/metadataserver
+
+thread_count = 64
+ip_addr = 10.1.240.124
+dev_name = eth0
+port = 11111
+
+[metaserver]
+meta_db_infos = 10.1.240.124:3306:tfs_metaserver,root,123456
+max_spool_size = 10
+gc_ratio = 0.1
+max_cache_size = 1024
+max_mutex_size = 256
+free_list_count = 256
+max_sub_dirs_count = 1000000
+max_sub_files_count = 1000000
+max_sub_dirs_deep = 10
+ip_addr = 10.1.240.124:3500
+
+./tfs start_meta
+
 
 6.安装nginx-tfs
 git clone https://github.com/alibaba/nginx-tfs.git
