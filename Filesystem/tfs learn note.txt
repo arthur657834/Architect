@@ -391,6 +391,10 @@ insert into t_cluster_rack_info (cluster_rack_id, cluster_id, Ns_vip, cluster_st
 
 ./tfs start_rc
 
+测试
+./tfstool -r 192.168.1.1:5100
+TFS>  put /root/install.log .txt tfs1
+TFS> get T1ERxTByJT1RXrhCrK /home/qwemgh.log tfs1 
  
  
  
