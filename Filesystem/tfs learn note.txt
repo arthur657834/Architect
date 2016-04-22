@@ -387,7 +387,7 @@ update t_app_info set need_duplicate=0 where app_key='tfs1';
  
 insert into t_cluster_rack_group (cluster_group_id, cluster_rack_id, cluster_rack_access_type, rem, create_time, modify_time) values (3, 3, 2, 'qwemgh_tfs', now(), now());
  
-insert into t_cluster_rack_info (cluster_rack_id, cluster_id, Ns_vip, cluster_stat, rem, create_time, modify_time) values (3, 'T1Axxxx', '10.1.240.124:8108', 2, 'qwemgh_tfs', now(), now());
+insert into t_cluster_rack_info (cluster_rack_id, cluster_id, Ns_vip, cluster_stat, rem, create_time, modify_time) values (3, 'T1Axxxx', '10.1.240.124:8100', 2, 'qwemgh_tfs', now(), now());
 
 ./tfs start_rc
 
