@@ -356,6 +356,46 @@ hash_slot_ratio = 0.5
 	list_file Block ID
 	read_file_data  Block ID 1 /tmp/test1.jpg
 
+vi rc.conf
+[public]
+    log_level = debug
+    log_num = 20
+    log_size = 134217728
+    work_dir = /home/rcserver/work_dir
+
+    thread_count = 4
+    ip_addr = 10.1.240.124
+    dev_name = eth0
+    port = 5100
+
+[rcserver]
+    rc_monitor_interval = 60
+    rc_stat_interval = 30
+    rc_update_interval = 10
+    rc_db_info = 10.1.240.124:3306:tfs_stat
+    rc_db_user = root
+    rc_db_pwd = 123456
+    
+ mysql -uroot -p123456 tfs_stat < $tfs_dir/sql/rcs/create_table.sql    
+ mysql -uroot -p123456 tfs_stat < $tfs_dir/sql/rcs/rc_test_info.sql
+ 
+insert into t_resource_server_info (addr_info, stat, rem, create_time, modify_time) values ('10.1.240.124:5100', 1, 'test first', now(), now());
+
+insert into t_app_info (app_key, id, quto, cluster_group_id, app_name, app_owner, report_interval, need_duplicate, rem, create_time, modify_time) values ('tfs1', 3, 1024*1024*1024, 3, 'qwemgh_picture',   'mutang', 5, 1, '', now(), now());
+ 
+update t_app_info set need_duplicate=0 where app_key='tfs1';
+ 
+insert into t_cluster_rack_group (cluster_group_id, cluster_rack_id, cluster_rack_access_type, rem, create_time, modify_time) values (3, 3, 2, 'qwemgh_tfs', now(), now());
+ 
+insert into t_cluster_rack_info (cluster_rack_id, cluster_id, Ns_vip, cluster_stat, rem, create_time, modify_time) values (3, 'T1Axxxx', '10.1.240.124:8108', 2, 'qwemgh_tfs', now(), now());
+
+./tfs start_rc
+
+ 
+ 
+ 
+
+
 6.安装nginx-tfs
 git clone https://github.com/alibaba/nginx-tfs.git
 下载在tengine-2.0.0(高版本编译不通过)
