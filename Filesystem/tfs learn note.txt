@@ -1,7 +1,7 @@
 http://www.linuxidc.com/Linux/2012-08/67500p3.htm
 http://code.taobao.org/p/tfs/wiki/get/
 
-1.yum -y install cmake gtest pcre pcre-devel readline-devel gperftools-devel libunwind-devel readline gperftools libunwind automake autoconfig libtool gtest libuuid-devel glibc-devel.i686 jemalloc*
+1.yum -y install cmake pcre pcre-devel readline-devel gperftools-devel libunwind-devel readline gperftools libunwind automake autoconfig libtool gtest libuuid-devel glibc-devel.i686 jemalloc* texinfo
  
 yum -y install http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
 yum -y install  mysql-community-devel
@@ -20,6 +20,25 @@ cp /usr/local/gcc-4.1.2/bin/gcc /usr/bin/
 
 export LD_LIBRARY_PATH=/usr/local/gcc-4.1.2/lib
 
+
+ linux-unwind.h:141: error: field ‘info’ has incomplete type
+ 解决办法：
+--- a/gcc/config/i386/linux-unwind.h    2011-01-03 20:52:22.000000000 +0000
++++ b/gcc/config/i386/linux-unwind.h    2012-07-06 12:23:51.562859470 +0100
+@@ -133,9 +133,9 @@
+     {
+       struct rt_sigframe {
+    int sig;
+-   struct siginfo *pinfo;
++   siginfo_t *pinfo;
+    void *puc;
+-   struct siginfo info;
++   siginfo_t info;
+    struct ucontext uc;
+       } *rt_ = context->cfa;
+       /* The void * cast is necessary to avoid an aliasing warning.
+       
+       
 
 3.安装yajl
 http://lloyd.github.io/yajl/
