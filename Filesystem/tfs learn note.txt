@@ -570,3 +570,65 @@ curl --data-binary @/root/1.jpg http://10.1.240.124:80/v1/tfs?suffix=.jpg\&simpl
 浏览器打开查看
 http://10.1.240.124:80/v1/tfs/T1iRJTByJT1RXrhCrK.jpg(tfs三个字符可以用任意字符代替，例如一个空格字符，或者aaaa,bbb等，但至少需要存在一个字符)
 
+ --配置rs信息
+insert into t_meta_root_info (app_id, addr_info, stat, rem, create_time, modify_time) values (1, '10.1.240.124:3500', 1, 'test first', now(), now());
+--更新生效
+insert into t_base_info_update_time (base_last_update_time, app_last_update_time) values (now(), now())  
+以下配置可以拿到appid
+http://10.1.240.124/v2/tfs1/appid
+vi /usr/local/nginx/conf/nginx.conf
+# cat /usr/local/nginx/conf/nginx.conf
+user nobody;
+worker_processes 2;
+
+#error_log logs/error.log;
+#error_log logs/error.log notice;
+error_log logs/error.log info;
+
+pid logs/nginx.pid;
+
+
+events {
+worker_connections 10240;
+}
+
+
+http {
+include mime.types;
+default_type application/octet-stream;
+
+log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+'$status $body_bytes_sent "$http_referer" '
+'"$http_user_agent" "$http_x_forwarded_for"';
+
+#access_log logs/access.log main;
+
+sendfile on;
+#tcp_nopush on;
+
+#keepalive_timeout 0;
+keepalive_timeout 65;
+
+gzip on;
+
+
+tfs_upstream tfs_rc {
+server 10.1.240.124:5100;
+type rcs;
+rcs_zone name=tfs1 size=128M;
+rcs_interface eth0;
+rcs_heartbeat lock_file=/usr/local/nginx/logs/lk.file interval=10s;
+}
+
+server {
+listen 80;
+server_name localhost;
+
+tfs_keepalive max_cached=100 bucket_count=10;
+#tfs_log "pipe:/usr/local/cronolog/sbin/ -p 30min /path/to/nginx/logs/cronolog/%Y/%m/%Y-%m-%d-%H-%M-tfs_access.log";
+
+location / {
+tfs_pass tfs://tfs_rc;
+}
+}
+}
