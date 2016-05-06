@@ -20,6 +20,9 @@ cp /usr/local/gcc-4.1.2/bin/gcc /usr/bin/
 
 export LD_LIBRARY_PATH=/usr/local/gcc-4.1.2/lib
 
+WARNING: `makeinfo' is missing on your system. You should only need it if
+修改configure:3552
+
 
  linux-unwind.h:141: error: field ‘info’ has incomplete type
  解决办法：
