@@ -52,7 +52,7 @@ ln -s /usr/local/lib/libyajl.so.2 /lib64/libyajl.so.2
 export TBLIB_ROOT=/usr/local/tb-common-utils-lib
 svn checkout -r 18 http://code.taobao.org/svn/tb-common-utils/trunk/ tb-common-utils
 cd tb-common-utils
-build.sh进
+sh build.sh
 
 5.安装tfs
 svn co http://code.taobao.org/svn/tfs/tags/release-2.2.16
