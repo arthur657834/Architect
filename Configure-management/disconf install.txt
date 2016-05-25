@@ -1,0 +1,105 @@
+http://blog.csdn.net/jthink_/article/details/50538829
+
+yum -y install http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+yum -y install mysql-community-server nginx
+service mysqld start
+set password for 'root'@'localhost' = password('123456');
+mysql -u root -p123456
+
+安装redis,zk,tomcat,mvn
+
+git clone https://github.com/knightliao/disconf.git
+
+mkdir -p /usr/local/disconf/{source,war}
+
+vi /etc/profile
+ONLINE_CONFIG_PATH=/usr/local/disconf/source
+WAR_ROOT_PATH=/usr/local/disconf/war
+export ONLINE_CONFIG_PATH
+export WAR_ROOT_PATH
+
+source /etc/profile
+
+cd /root/disconf/disconf-web/profile/rd
+cp application-demo.properties jdbc-mysql.properties redis-config.properties  zoo.properties log4j.properties logback.xml /usr/local/disconf/source/
+
+cd /usr/local/disconf/source/
+mv application-demo.properties application.properties
+
+application.properties
+该文件中主要是配置了监控邮件发送和接受的服务器和邮箱地址
+zoo.properties
+主要修改里面的hosts，指定zookeeper集群的host的端口
+jdbc-mysql.properties
+主要修改数据库的host和mysql的用户名和密码
+redis-config.properties
+主要修改2个实例的host和端口
+rabbit.properties
+修改用户名和密码以及端口（自己安装的默认端口是5672）
+log4j.properties
+主要修改日志存放的路径
+log4j.appender.dailyRolling.File= /root/apache-tomcat-9.0.0.M3/log/disconf-log4j.log
+logback.xml
+主要修改web和监控的log存放位置
+<property name="log.base" value="/root/apache-tomcat-9.0.0.M3/log/disconf-web"/>
+<property name="log.monitor" value="/root/apache-tomcat-9.0.0.M3/log/monitor"/>
+
+cd disconf/disconf-web/
+sh deploy/deploy.sh
+会发现war的内容会生成在/usr/local/xxx/disconf/war这个文件夹下
+
+vi apache-tomcat-9.0.0.M3/conf/server.xml 
+145 行
+<Context path="" docBase="/usr/local/disconf/war"></Context>
+
+初始化数据库:
+根据disconf-web下的sql文件夹下的README.md来初始化
+cd /root/disconf/disconf-web/sql/
+mysql -uroot -p123456 < 0-init_table.sql 
+mysql -uroot -p123456 disconf < 1-init_data.sql 
+mysql -uroot -p123456 disconf < 201512/20151225.sql
+
+vi /etc/nginx/nginx.conf
+http这个标记对里面加
+
+upstream disconf {
+    server 127.0.0.1:8080;
+}
+
+
+server {
+    listen 8991;
+    server_name localhost;
+    access_log /var/log/nginx/disconf/access.log;
+    error_log /var/log/nginx/disconf/error.log;
+ 
+
+    location / {
+        root /usr/local/disconf/war/html;
+        if ($query_string) {
+            expires max;
+        }
+    }
+ 
+
+    location ~ ^/(api|export) {
+        proxy_pass_header Server;
+        proxy_set_header Host $http_host;
+        proxy_redirect off;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Scheme $scheme;
+        proxy_pass http://disconf;
+    }
+}
+upstream disconf 配置中的端口必须与tomcat启动的端口一致
+server中listen是启动该disconf前端的端口
+里面需要修改access_log和error_log指定log的位置
+disconf使用前后端分离的部署方式，前端配置在nginx是那个，后端api部署在tomcat中
+
+mkdir -p /var/log/nginx/disconf
+mkdir -p /root/apache-tomcat-9.0.0.M3/log/disconf-web
+mkdir -p /root/apache-tomcat-9.0.0.M3/log/monitor
+分别启动tomcat和nginx，打开浏览器：http://localhost:8991/
+使用用户名admin和密码admin进入系统
+
+
