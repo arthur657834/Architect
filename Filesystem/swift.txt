@@ -1,149 +1,91 @@
-http://docs.openstack.org/developer/swift/policies_saio.html
-
-wget https://bitbucket.org/tsg-/liberasurecode/downloads/liberasurecode-1.1.0.tar.gz
-
-tar xzvf liberasurecode-1.1.0.tar.gz
-cd liberasurecode-1.1.0
-./configure
-make
-make install
-
-#还是yum好用
-yum -y install ftp://ftp.muug.mb.ca/mirror/centos/7.2.1511/cloud/x86_64/openstack-liberty/common/liberasurecode-1.0.9-3.el7.x86_64.rpm ftp://ftp.muug.mb.ca/mirror/centos/7.2.1511/cloud/x86_64/openstack-liberty/common/liberasurecode-devel-1.0.9-3.el7.x86_64.rpm
-
-yum -y install python34-setuptools
-pip install distribute
-pip install --upgrade setuptools
-
-yum install -y curl gcc memcached rsync sqlite xfsprogs git-core \
-                 libffi-devel xinetd liberasurecode-devel \
-                 python-setuptools \
-                 python-coverage python-devel python-nose \
-                 pyxattr python-eventlet \
-                 python-greenlet python-paste-deploy \
-                 python-netifaces python-pip python-dns \
-                 python-mock
-
-添加硬盘:
-fdisk /dev/sdb
-mkfs.xfs /dev/sdb1
-
-
-echo "/dev/sdb1 /mnt/sdb1 xfs noatime,nodiratime,nobarrier,logbufs=8 0 0" >> /etc/fstab
-
-mkdir /mnt/sdb1		 
-mount /mnt/sdb1
-mkdir /mnt/sdb1/1 /mnt/sdb1/2 /mnt/sdb1/3 /mnt/sdb1/4
-mkdir /srv
-for x in {1..4}; do sudo ln -s /mnt/sdb1/$x /srv/$x; done
-mkdir -p /srv/1/node/sdb1 /srv/1/node/sdb5 \
-              /srv/2/node/sdb2 /srv/2/node/sdb6 \
-              /srv/3/node/sdb3 /srv/3/node/sdb7 \
-              /srv/4/node/sdb4 /srv/4/node/sdb8 \
-              /var/run/swift
-chown -R ${USER}:${USER} /var/run/swift
-
-# **Make sure to include the trailing slash after /srv/$x/**
-for x in {1..4}; do sudo chown -R ${USER}:${USER} /srv/$x/; done
-				 
-				 
-
-mkdir -p /var/cache/swift /var/cache/swift2 /var/cache/swift3 /var/cache/swift4
-chown <your-user-name>:<your-group-name> /var/cache/swift*
-mkdir -p /var/run/swift
-chown <your-user-name>:<your-group-name> /var/run/swift
-
-cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
-cd $HOME/python-swiftclient; sudo pip install -r requirements.txt; sudo python setup.py develop; cd -
-
-
-git clone https://github.com/openstack/swift.git
-cd $HOME/swift
-pip install -r requirements.txt
-pip install -r test-requirements.txt
-python setup.py develop
-
-
-vi /etc/xinetd.d/rsync
-service rsync
-{
-        disable = no
-        socket_type     = stream
-        wait            = no
-        user            = root
-        server          = /usr/bin/rsync
-        server_args     = --daemon
-        log_on_failure  += USERID
-}
-
-sudo cp $HOME/swift/doc/saio/rsyncd.conf /etc/
-sudo sed -i "s/<your-user-name>/${USER}/" /etc/rsyncd.conf
-
-sudo systemctl restart xinetd.service
-sudo systemctl enable rsyncd.service
-sudo systemctl start rsyncd.service
-
-测试
-rsync rsync://pub@localhost/
-
-
-systemctl enable memcached.service
-systemctl start memcached.service
-
-cp $HOME/swift/doc/saio/rsyslog.d/10-swift.conf /etc/rsyslog.d/
-
-vi /etc/rsyslog.conf
-+ $PrivDropToGroup adm
-
-mkdir -p /var/log/swift/hourly
-mkdir -p /var/log/swift
-
-chown -R root:adm /var/log/swift
-chmod -R g+w /var/log/swift
-systemctl restart rsyslog.service
-
-
-rm -rf /etc/swift
-cd $HOME/swift/doc; sudo cp -r saio/swift /etc/swift; cd -
-chown -R ${USER}:${USER} /etc/swift
-find /etc/swift/ -name \*.conf | xargs sudo sed -i "s/<your-user-name>/${USER}/"
-
-
-mkdir -p $HOME/bin
-cd $HOME/swift/doc; cp saio/bin/* $HOME/bin; cd -
-chmod +x $HOME/bin/*
-
-echo "export SAIO_BLOCK_DEVICE=/srv/swift-disk" >> $HOME/.bashrc
-sed -i "/find \/var\/log\/swift/d" $HOME/bin/resetswift
-cp $HOME/swift/test/sample.conf /etc/swift/test.conf
-
-
-echo "export SWIFT_TEST_CONFIG_FILE=/etc/swift/test.conf" >> $HOME/.bashrc
-
-. $HOME/.bashrc
-
-remakerings
-
-#Verify the unit tests run:
-$HOME/swift/.unittests 
-
-startmain
-
-curl -v -H 'X-Storage-User: test:tester' -H 'X-Storage-Pass: testing' http://127.0.0.1:8080/auth/v1.0
-curl -v -H 'X-Auth-Token: <token-from-x-auth-token-above>' <url-from-x-storage-url-above>
-
-curl -v -H 'X-Auth-Token: AUTH_tk40e95076adba407c82396ea0309b97e3' http://127.0.0.1:8080/v1/AUTH_test
-
-
-
-
-swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing stat
-
-$HOME/swift/.functests
-
-
-$HOME/swift/.probetests
-
-
-
-
+U2FsdGVkX18bN9ezNhVzX5iybanzSOlK0zJUSut9cb0oMNVrMrfM6vT3KVbtLb/s
+7vk4bYJ6IGThd0eqQVwiPtYyD73cmnD2tr5vNuIj2pr1ALiZPvCcSck2rEmFeNVN
+Mg5K5nAa9gHaYUTq3IgYUf76cZZ7iKDPSoF2LSeOIW6D8H1czrPP5luTG3F76I0E
+qovq/Jx/s0VqK//9fnC6FfqeCNmZ/wv//TVBsomoGfRIJ3lCe5fzaezxl52JNmmo
+VqzAX9sCOyDWyTsTvT+u7hlS/cVcJrJ/qZo+vyDPtk0le7HO0wA7b04JPM5/G348
+3ea8JlIpEHFBN4eUyvhJngZWRdm4h4wLIQGQ5ScGfDs5WhGhJMmtTnKzZb2KdIM/
+PBoGvF+ahmtR5kofmWJj0j8J3sI9CXf0z8gesZzf1USRsLPVxhx1BHfKqav+r2CY
+PP5cT9JSZ50OtS0HifUSSn/jInHPdv1KPdW8G4DhDP3rINjfjZYxCuBlSzlws36d
+eGbY2j784jbGzgFXJdE9Eo/11TMGOGzd5NGK0hxLLvJi+ZjkgdNpc3zwV9VwSfii
+SG7ptw0/24PtL8QViPKPmLO6jUj4MZ4eexesCNrJKWPUGAxDywDVX4Xo+TwP3Prr
+fahaGeQM/unXH/XG1Qw+KQVjRIOT5taJrPb9FkD2ZoZIymQDGab/5m/ZxShlbMdd
+6v1ha5yFAveTPVLOtHN5PE0uZ93D4Ccym7+Kc/9DawIR7BsmyjfvCGPWnF/wdcXd
+noJh7j0JnCwMlianRKkTZEQnjGL0e02+hGQIGgMTuuhKkU/7yNaq0XHvWHK8PAwY
+xZgoErwjqGD9PZuGo4/6lGpN6rMfmEVAb/j66Iy/RKf3trASKAJg23YcCHquZFO2
+EYEVmjqhgcdrz/ijWnoB6FTIkY7XbUT1MKAxQCrUHnauhvsuMxDlgHDlKvCooIPv
+ILRsNEKb+SuPtwGa+8plb/dj29U9MS8OUG294u1UkpJcbfe+dp7zbPPeQE0AJc1j
+DIlHLb5Vt9DjZOqJjDhLba+rUfLMspe8JLjQqV6RKCa3CAordrSNXiq763M9cYpg
+Mus1xoJeVEUvS+7g581Lh+deFKK1SlRvsirmV7dQqJKwrX3OFr/ADSvgd9AiEYcc
+G6wHMn6fbJWUp9keRYIw028aX8DBoSX0KddPKASWdkBQs+ebgwTeQqKVyBKMUF0Y
+Y2yA44VuX62Kvzzpqz77hBrGQGg3xA4a7er9o8Ng1o+pToKMyU40ZJw2uFbrMrmi
+34Hbsr/R4LOafLMjdngYQmmvn6Pc5S7YzRDo5Ta7nBgiWzvM/CNgMOPo//udpZEY
+1c0l5pL2jqya/WXEtW0IW07H+y9pHOr11PN4GTZfiGcUtk3bBp/BIS6d0eDXPRpU
+BT2G+FI8rtUTf26rcf1+kjGzQxF/Ev6c8rT5hQaHsTMWuHcu2N0wNFzDp9zhcZMG
+YuC0W7Sct+39++yr7RS7q+cmEk7z4tcOTRqBdoM98WmHKwC1oxGK4a75pUP5KkBb
+x8LcCtKIX8soQJ29z8KXBrHsOBrCnycYYBrlTC56p9MWn2GUkDBMT47bIr5snVzg
+LYy/NVF8TUMEEhcmtDhZxKfwZcuz+6TJd9xfbjDJR4u/ou0gTcsWqodSNZQVevhc
+x1miX+xxSLObHHBa7amStG0FRI9upLL/jQ6WUpGnb5Eacc6EWgFSWR5diDCn4N8O
+DnFou2a5mcvv7hwyGv3EWKZzIcsjOJKSZZU62y2ODsqY8TIIvxdigZB3v57oQzup
+lu3MEnnUajgRJaWeg1vcBYpU9UAnyv+bDWn5I3tg6W/quO3bNClTFQ1NOZqXhfnV
+EMQ6Z4uApVX3OXJSeoOjQohDhLCosh5jS/2NGfunqIYouCZSo+NSDkThmriC7sap
+UjIvCXr17of7Tn95znCvcFdHxpBnhwPeRF17C4e0qyzHCcC3rNx0m7tAPbMBRWIO
+wwsdkb8NHWAG2lFLRT3TVBu2TPDVmvTV5OfK8P42I61BVSfSLD7uOjQ9rkRBLOMh
+wCVaJxrqEOunUz95A4UbPeMO+B/Cub05H5liMxr0KO2XdUKeuk6MJ48cE+lqKsf2
+MjJtprIeTdp3Pl37Q5Poag2SlqH/Adrs5uZhsNfvgLxjMeTSfgOVrLzrcs5GiLvh
+RQV/wqDKT+KBafqYfsTJ0EtnQmcQrkCE99OTEVapmwXuOn/lRIJB2H1/BBDqYP6s
+t3ZXaTaGuvsWUY24isQppd+vcW5OBTz6gc5hBpI1aX9ZbFsgd9MnOlHIJyQiu04y
+McUQBJrHdyvzX7v8Vm7xtCq971dvs6BFJuCy42qJLScWXt5AucvVp5sIUC65yn+T
+cffkD4g9j2m/KaXszGje8+p7D/+71SNk7fqB4pxgXxjeWmCT0PDOWZFum0A81BYS
+dFGp3NrgVSIWykBua7Tra3sNLVJPmrDLnNI+DZXebryutdeXl6v1AN1lQtP74Ph3
+a59Bwium5YVMUEIWRQUgWnaLJP4lDHBevXcfa3Zvp2iWYHpwqm6R9X7TTYSiKMX6
+ij8bqm8exsA7CrdOUTMmq6XOiD1HIRxfPWxHsTd2LayL/iMkwnDsLXI/RCyAH3FO
+Hgm7dtlD811CdWZyPPiSDYf4Nf708ImiqhJ3OirbB0Y65iE2G1Ef8YnHyVNiTEvu
+T0rjw0Bz9o1IweOCVQPD83O4K4pY+Ni3QwZu39efCbTioKfX67zbPTRO5loZhKro
+5hK/btl1REretTg3qHDgJEAJPOpk2vYSCI9UbQEM1aiWJtiYTwyOCa7tdj9ZTtr2
+N+cJQ8muimrVmkexM8qUXHoSrE4gpOPvQhiAQMaFrPtkqILEL2m9SqoZSFM+rC6I
+nv4tnOhEyseAT59KLbvJnK37o+laSssEARitIRwZKgAvJ0rMS3Gpswc8rgZjAYn7
++hPwD4TaM05gzHlLf8AIQz2cTaAto4UEjOmiGga8+Oe0Ee0FNAaGNHowXRp39Hzm
+VwIz0GYCKMIIHWh9Hpnmol7PR4mftNVAp1vqRysj6c2bJrrwIKgJF3LHWoKoIMtt
+v6tnqO7eAxzAHuOdpemhBMsZ59qxQU1nNFjx/SlNn63qGNJ4NSXW+gzQaD4ctOQ9
+G+AYU+dDDIvsiz1ZoeqABGco6BIzW5pBIso7v61QLW/cI7K5PkLd58T0uUYirXM4
+q4Cxb9G1JyS2ud5Qs2VmNF7QP+SPisONd2zL6Hc1aKKbAxISTRLP039RjWUPHjvv
+sIBkspMW71uLCbXEpQZq+tW9lz59fNG3T37rHHJAN/92SKA/QPbosoTP/a/0tnIZ
+QQwWgGBa4BQwWxtEdC5QFrroL2lXDJuiPIzip7Njnaq/CtcoIXxzr78fuX0Bgf/z
+HxgXrjFJHNZlrtR2KKcZNryE4NDqP5220Vuk2AbXj/UssMsho0k2BsH7k43z9teb
+GNgrZ8BLLH3iYuwOUZBL+ZsVQjjIA9h+jDVCiidDbStFrJZTgSBxCmrMe6rXZKI4
+hxmbb88rS5NPgqwi6CPhFrEb1Uyd6nz0c3ehoPQuzLZ16vj4afG0XrM1x/BPah40
+lRffys6IMIIbkU0GCd3r//jhiq2AVxvwO2Kn6tgida1eqbYZXbj3kXJNjW7DDflf
+TZlnHTNADqEEpoNpZ3IRb1jcjywNQ0d0y7la3w2HYW/lb3bavzmgBl6qT0EI4FRD
+zmNniP1ulWD6lQIrW1xH6bue+6w1wle/qrVeHfG6tpXLQzDfutBaXM/I0qjfK/uo
+uNv2TjK7YO/XnNs9K9RMelIm4IUvg8LzEHeEV2JgG9caa/FD4KTF4HlzWtm3npNA
+gWvM8pcvDXQRUE0ZtmMix9rKfGbEBmLYkmWJUxylW73FXDX07rMXmD0tjUw4dZ/e
+LdS+U6dG3ffcLEDuMBebo6p8r78fsp0x97LH7hvql0QNLrRMVIue9kwe9THR9mML
+et+CorNUgHi6BO0vGBqrvDdQBj9eeQBlzJK152LzltdrMV08NPSTZb0e17QFP3n4
+wgKtH5ONLSp6xmM/U8Siav8pVxxYlgpALl3/nBvT5JRNU17O9ldU53c0Z+fEyg/O
+wOqq8oVpFNEKn4ATADS4GCzPWHDj8qCSvQxrOk31fkTM+Qr4q5Yz6S+QbTgzmsSm
+7ccOjZ6y6hfdTUD4hsj26+rA0vxQ3Px+xPbjyZx3m5wPySHedqO6DQbrRdympG1L
+tDpqSwCKwonZQKHHiwhO27B3o221vhkl5GBjOz5Qnij8Oh3oI/V/0Nqmx/BYJ3vF
+QETyeRoCPztN5dM196nFSnDSA3pLkWFttNz6dgzugXPSBLJz37TviQNjfh6ZqwKK
+iVTh0ZbQHFdJbNFFD1PNZLN8fWDtaRHUAizaW6IkV+aiJDkLKvXwr/3VPS6zZsdy
+sw4L0F4E9tOKSE5DLlihSP0PaZec3QmKU9LBdReEhoiwhJ4xOBc67m/ZC0AOkeNZ
+FZX6xaRc5gnNlKe12lWRBoC0uyB+9+usE913Y802eIXKi6GbBcJmjvGYWFDQETnj
+g8cjPR89woMCNfXJImrirq/13uF8Ncwo/6+b10wdCZsggRdKLNUQvEi35f/seNt4
+kjsnsp6PGhsDs7iooMiyeljf5gw6c7sVuYoMbTF6jKun2w/drgPBK7uLktoA8OEr
+ERoH31PQu2V0nnjXtn48X9/o7wBIMMt4/nDN83O29p1TYeWvyo0Xy/3c9+ItMv52
+76JPFQ8aOUeHlvZyLB/D1zW/LFkZjVS067mq/DllTRyvTdqQt2MCX8palY6FogTT
+2M9ZcrZlViv5fs1WEN510k7bQPol1Xu4XVleZU5jPNjFrez3EyiZurFAT/nwZsxH
+xn8J9kI4IhgXdh1eVXKwYk17EB+W0VY039AXDGb0ZLoJxn3jhy3FfuZsew+EnJFU
+1hMOMidAwb/VosIuAE+NQagDtdHLkHm0FLtsrdtHXgnO+D5rAOqa/IpCcLbTLEVE
+bAmLnZsc6Ywxr+APcNAmwtwWH0EZipZRDqLHpxp5rcHHe9JRVW/cyApnZVecQlmF
+pHNDv5ejNoumit5wjQem+75fOOttJc3vnSPeCFO+lgkVdLkc8jgBD6PygJyZ1vXO
+FcTfk3J5UCKOM5OS7AZBTjeGhnFC1feBkT1qDRWicBL5KKYbUMAKTjoB6pFVV7Ql
+Ybi757yOLQC5NaUh/0Pt7f3ycUxy9gp2tif+bo/sLJHxiGsS5qoSmyJ6nwmrfQTk
+0q2QYemp3p4bPtFv+PwfDsJFRjCTk5vvgkioxq+LWED+ktnvj6Bw9FhoLcl7kGat
+62AUbTiddGKCaAvgnv2R843XEa41lrZV9LV+vz5sXxMTKFdqVhn84peLFELvwi2j
+5yZlTK/RZZvN0hW30vLIaxTIc0aoaS5WMUKEY9DPu4jcCwssdLUDbXRkvUyoKnjN
+MuVHZFFUVS8aHZkfsFbs4qY/v2OVDsthAgTb2j11P9tMywdzLim+X49EAuTJtexy
+2HCsOGmH5zaonEO7/J8ovQLG/8RdVcbcCK40kWi/SJuQFBlp7xAi1v1G6P/SelR3
+r3VXcKPYhOjBHls/RYjO4cvnrm/WKzpjbkUAqaZVi6NEIT9Uii82oViJZ2Txe4cf
+GhSzxdA31KYKLzndm2z+Yw27nwKvhpgC17WVWz60UuzD6kQ+cVgxjnIXaIb5+2AF
+eoR5kHi8UUfS3Iqq5PsLGprp3E5E/H1J84WfbU+/aY1CtkUfRYkr3c/Nv1TWioeH
+fWggoulQ4FmWMN9CkYOuqBiKScCzNaURiQx8tW3/HyZQdZrIBM60fQ==

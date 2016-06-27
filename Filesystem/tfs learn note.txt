@@ -1,645 +1,307 @@
-http://www.linuxidc.com/Linux/2012-08/67500p3.htm
-http://code.taobao.org/p/tfs/wiki/get/
-
-1.yum -y install cmake pcre pcre-devel readline-devel gperftools-devel libunwind-devel readline gperftools libunwind automake autoconfig libtool gtest libuuid-devel glibc-devel.i686 jemalloc* texinfo
- 
-yum -y install http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
-yum -y install  mysql-community-devel
-
-2.gcc 降级
-gcc-4.1.2
-./configure --prefix=/usr/local/gcc-4.1.2
-make
-make install
-
-mv /usr/bin/g++ /usr/bin/g++.bak
-cp /usr/local/gcc-4.1.2/bin/g++ /usr/bin/
-
-mv /usr/bin/gcc /usr/bin/gcc.bak
-cp /usr/local/gcc-4.1.2/bin/gcc /usr/bin/
-
-export LD_LIBRARY_PATH=/usr/local/gcc-4.1.2/lib
-
-WARNING: `makeinfo' is missing on your system. You should only need it if
-修改configure:3552
-
-
- linux-unwind.h:141: error: field ‘info’ has incomplete type
- 解决办法：
---- a/gcc/config/i386/linux-unwind.h    2011-01-03 20:52:22.000000000 +0000
-+++ b/gcc/config/i386/linux-unwind.h    2012-07-06 12:23:51.562859470 +0100
-@@ -133,9 +133,9 @@
-     {
-       struct rt_sigframe {
-    int sig;
--   struct siginfo *pinfo;
-+   siginfo_t *pinfo;
-    void *puc;
--   struct siginfo info;
-+   siginfo_t info;
-    struct ucontext uc;
-       } *rt_ = context->cfa;
-       /* The void * cast is necessary to avoid an aliasing warning.
-       
-       
-
-3.安装yajl
-http://lloyd.github.io/yajl/
-编译成功之后
-ln -s /usr/local/lib/libyajl.so.2 /lib64/libyajl.so.2
-
-4.安装tb-common-utils
-export TBLIB_ROOT=/usr/local/tb-common-utils-lib
-svn checkout -r 18 http://code.taobao.org/svn/tb-common-utils/trunk/ tb-common-utils
-cd tb-common-utils
-sh build.sh
-
-5.安装tfs
-svn co http://code.taobao.org/svn/tfs/tags/release-2.2.16
-cd /root/release-2.2.16/
-sh build.sh init
-./configure --prefix=/usr/local/tfs --with-release=yes --without-tcmalloc
-make
-make install
-
-cp /root/release-2.2.16/conf/*conf ./
-
-vi ns.conf
-[public]
-#log file size default 1GB
-log_size=1073741824
-
-#log file num default 64
-log_num = 64 
-
-#log file level default debug
-log_level=info
-
-#main queue size default 10240
-task_max_queue_size = 10240
-
-#listen port
-port = 8100
-
-#work directoy
-work_dir=/usr/local/tfs
-
-#device name
-dev_name= eth0
-
-#work thread count default 4
-thread_count =32 
-
-#ip addr(vip)
-ip_addr = 10.1.240.124
-
-[nameserver]
-
-safe_mode_time = 360
-
-ip_addr_list = 10.1.240.124|192.168.0.2
-
-group_mask = 255.255.255.255
-
-#second
-max_write_timeout = 3
-
-#max_task_in_machine_nums = 14
-
-#cleanup_write_timeout_threshold = 40960
-
-# cluster id defalut 1
-cluster_id = 1 
-
-# block use ratio
-block_max_use_ratio = 98
-
-# bytes
-block_max_size = 5497472 
-
-#
-max_replication = 1 
-
-# block lost, replicate ratio
-replicate_ratio = 50
-
-max_write_filecount = 64 
-
-# use capacity ratio
-use_capacity_ratio = 96
-
-#heart interval time(seconds)
-heart_interval = 4
-
-# object dead max time(seconds) default
-object_dead_max_time = 300
-
-#
-object_clear_max_time = 180 
-
-heart_thread_count = 4 
-
-heart_max_queue_size = 2048
-
-report_block_thread_count = 6
-
-report_block_max_queue_size = 32
-
-report_block_hour_range = 2~4
-
-#day
-report_block_time_interval = 1
-
-#heart_interval * 2
-#report_block_expired_time = 4
-
-#replicate block wait time
-repl_wait_time = 180
-
-compact_delete_ratio =  10  
-
-compact_max_load = 200
-
-compact_hour_range = 1~10
-
-dump_stat_info_interval = 60000000 
-
-balance_percent = 0.05
-
-add_primary_block_count = 3
-
-task_percent_sec_size = 200 
-
-oplog_sync_max_slots_num = 1024
-
-oplog_sync_thread_num = 1
-
-group_count = 1
-
-group_seq  = 0
-
-discard_newblk_safe_mode_time = 360 
-
-choose_target_server_random_max_num = 128
-
-#task_expired_time = 120
-
-vi  ads.conf 
-[public]
-#log file size default 1GB
-log_size=1073741824
-
-#log file num default 64
-log_num = 64 
-
-#log file level default debug
-log_level=debug
-
-#main queue size default 10240
-task_max_queue_size = 10240
-
-#listen port
-port = 12000
-
-#work directoy
-work_dir=/usr/local/tfs
-
-#device name
-dev_name= eth0
-
-#work thread count default 4
-thread_count = 4
-
-ip_addr = 10.1.240.124
-
-[adminserver]
-
-# check interval
-check_interval = 5
-# check count
-check_count = 5
-# warn threshhold
-warn_dead_count = 3
-# wait time before kill ds
-ds_fkill_waittime = 15
-# ds start base cmd
-ds_script = /home/admin/tfs/bin/dataserver -f /home/admin/tfs/conf/ds.conf -d
-# ds index list
-ds_index_list = 1,2,3
-
-[nameserver]
-
-ip_addr = 10.1.240.124
-port = 8100
-
-[dataserver]
-
-port = 8200
-lock_file = /home/admin/tfs/logs/dataserver
-mount_name = /data/disk
-
-
-vi ds.conf 
-[public]
-#log file size default 1GB
-log_size=1073741824
-
-#log file num default 64
-log_num = 64 
-
-#log file level default debug
-log_level=info
-
-#main queue size default 10240
-task_max_queue_size = 10240
-
-#listen port
-port = 8200 
-
-#work directoy
-work_dir=/usr/local/tfs
-
-#device name
-dev_name= eth0
-
-#work thread count default 4
-thread_count = 32 
-
-#ip addr
-ip_addr = 10.1.240.124
-
-[dataserver]
-
-#nameserver ip addr(vip)
-ip_addr = 10.1.240.124
-
-ip_addr_list = 10.1.240.124|192.168.0.2 
-
-#nameserver port
-port = 8100
-
-# slave cluster ns ip:port
-# slave_nsip = 192.168.0.10:8100
-
-#heart interval time(seconds)
-heart_interval = 2
-
-check_interval = 2
-
-#expire_datafile_time = 90
-
-#expire_clonedblock_time = 180
-
-#expire_compactblock_time = 600
-
-replicate_threadcount = 1
-
-#write_sync_flag = 1
-
-block_max_size = 75497472 
-
-dump_visit_stat_interval = 60
-
-#max_io_warning_time = 0
-
-backup_type = 1
-
-#backup_path = /home/admin/tfs
-
-#max_data_file_nums = 50
-
-#max_crc_error_nums = 4
-
-#max_eio_error_nums_ = 6
-
-#expire_checkblock_time = 86000
-
-#max_cpu_usage = 60
-
-#dump_stat_info_interval = 60000000
-
-mount_name = /data/disk
-
-# KB
-mount_maxsize = 10227000
-
-base_filesystem_type = 1
-
-superblock_reserve = 0
-
-# bytes
-avg_file_size = 15360
-
-# bytes
-mainblock_size = 5497472 
-
-# bytes
-extblock_size = 4194304
-
-block_ratio = 0.5
-
-hash_slot_ratio = 0.5
-
-启动nameserver：
-./tfs start_ns 
-
-启动data server：
-	添加硬盘
-	mkfs.ext4 /dev/sdb1
-	mount /dev/sdb1 /data/disk2
-	
-	vi /etc/fstab
-	/dev/sdb1                /data/disk2              ext4    defaults        1 2
-	
-	./stfs format 1
-	
-	./tfs start_ds 1(./tfs start_ds 2,4-6)
-
-连接测试：
-	 /usr/local/tfs/bin/ssm -s 10.1.2401.24:8100  
-		server -b    \\随即列出dataserver的block块
-		server -w     \\随机列出dataserver的可写块 
-		machine -a   \\列出dataserver的使用报道。
-		
-		ssm -s ns_ip:port -i "server" 或者
-		ssm -s ns_ip:port -i "machine"
-		
-用tfstool上传一张图片：
-“客户端首先向nameserver发起写请求，nameserver需要根据dataserver上的可写块，容量和负载加权平均来选择一个可写的 block。并且在该block所在的多个dataserver中选择一个作为写入的master，这个选择过程也需要根据dataserver的负载以 及当前作为master的次数来计算，使得每个dataserver作为master的机会均等。master一段选定，除非master宕机，不会更 换，一旦master宕机，需要在剩余的dataserver中选择新的master。返回一个dataserver列表。
-客户端向master dataserver开始数据写入操作。master server将数据传输为其他的dataserver节点，只有当所有dataserver节点写入均成功时，master server才会向nameserver和客户端返回操作成功的信息。“
-
-也就是说客户端发起一个请求，nameserver先根据dataserver的 容量和负载 来选择一个dataserver来做为所有dataserver的master(除非master宕机，不会更换，宕机则自动重新选择)然后根据ns.conf的配置的备份数全部写入，才向nameserver和客户端返回操作成功信息。
-
-/usr/local/tfs/bin/tfstool -s 10.1.240.124:8100
-	put /root/1.jpg
-
-读取返回信息中的Block ID和block中的File ID
-/ust/local/tfs/bin/ds_client -d 10.1.240.124:8200
-	list_file Block ID
-	read_file_data  Block ID 1 /tmp/test1.jpg
-
-vi rc.conf
-[public]
-    log_level = debug
-    log_num = 20
-    log_size = 134217728
-    work_dir = /home/rcserver/work_dir
-
-    thread_count = 4
-    ip_addr = 10.1.240.124
-    dev_name = eth0
-    port = 5100
-
-[rcserver]
-    rc_monitor_interval = 60
-    rc_stat_interval = 30
-    rc_update_interval = 10
-    rc_db_info = 10.1.240.124:3306:tfs_stat
-    rc_db_user = root
-    rc_db_pwd = 123456
-    
- mysql -uroot -p123456 tfs_stat < $tfs_dir/sql/rcs/create_table.sql    
- mysql -uroot -p123456 tfs_stat < $tfs_dir/sql/rcs/rc_test_info.sql
- 
-insert into t_resource_server_info (addr_info, stat, rem, create_time, modify_time) values ('10.1.240.124:5100', 1, 'test first', now(), now());
-
-insert into t_app_info (app_key, id, quto, cluster_group_id, app_name, app_owner, report_interval, need_duplicate, rem, create_time, modify_time) values ('tfs1', 3, 1024*1024*1024, 3, 'qwemgh_picture',   'mutang', 5, 1, '', now(), now());
- 
-update t_app_info set need_duplicate=0 where app_key='tfs1';
- 
-insert into t_cluster_rack_group (cluster_group_id, cluster_rack_id, cluster_rack_access_type, rem, create_time, modify_time) values (3, 3, 2, 'qwemgh_tfs', now(), now());
- 
-insert into t_cluster_rack_info (cluster_rack_id, cluster_id, Ns_vip, cluster_stat, rem, create_time, modify_time) values (3, 'T1Axxxx', '10.1.240.124:8100', 2, 'qwemgh_tfs', now(), now());
-
-./tfs start_rc
-
-测试
-./tfstool -r 192.168.1.1:5100
-TFS>  put /root/install.log
-TFS> get T1ERxTByJT1RXrhCrK /home/qwemgh.log
- 
- 
- vi rs.conf
-[public]
-#log file size default 1GB
-log_size=1073741824
-
-#log file num default 64
-log_num = 64
-
-#log file level default debug
-log_level=debug
-
-#main queue size default 10240
-task_max_queue_size = 10240
-
-#listen port
-port =3500
-
-#work directoy
-work_dir=/usr/local/tfs
-
-#device name
-dev_name= eth0
-
-#work thread count default 4
-thread_count = 4
-
-#ip addr(vip)
-ip_addr = 10.1.240.124
-[rootserver]
-
-ip_addr_list=10.1.240.124|192.168.0.1
-
-safe_mode_time = 3
-
-mts_rts_lease_expired_time = 2
-
-mts_rts_lease_interval  = 1
-
-rts_rts_lease_expired_time = 2
-
-rts_rts_lease_interval  = 1
-
-table_file_path = /usr/local/tfs
-
-./tfs start_rs
-
-vi meta.conf 
-[public]
-log_level = debug
-log_num = 20
-log_size = 134217728
-work_dir = /home/metadataserver
-
-thread_count = 64
-ip_addr = 10.1.240.124
-dev_name = eth0
-port = 11111
-
-[metaserver]
-meta_db_infos = 10.1.240.124:3306:tfs_metaserver,root,123456
-max_spool_size = 10
-gc_ratio = 0.1
-max_cache_size = 1024
-max_mutex_size = 256
-free_list_count = 256
-max_sub_dirs_count = 1000000
-max_sub_files_count = 1000000
-max_sub_dirs_deep = 10
-ip_addr = 10.1.240.124:3500
-
-./tfs start_meta
-
-#rc 后端数据库信息，格式为“ip:port:dbname,dbuser,dbpasswd”，有分库时用;分割 
-meta_db_infos = 10.11.12.12:1234:tfs_name_db,root,root;10.11.12.12:1234:tfs_name_db,root,root
-
-6.安装nginx-tfs
-git clone https://github.com/alibaba/nginx-tfs.git
-下载在tengine-2.0.0(高版本编译不通过)
-./configure --add-module=/root/nginx-tfs
-make
-make install
-
-vi nginx.conf
-# cat /usr/local/nginx/conf/nginx.conf
-user  nobody;
-worker_processes  2;
-  
-#error_log  logs/error.log;
-#error_log  logs/error.log  notice;
-error_log  logs/error.log  info;
-  
-pid        logs/nginx.pid;
-  
-  
-events {
-    worker_connections  10240;
-}
-  
-  
-http {
-    include       mime.types;
-    default_type  application/octet-stream;
-  
-    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-                      '$status $body_bytes_sent "$http_referer" '
-                      '"$http_user_agent" "$http_x_forwarded_for"';
-  
-    #access_log  logs/access.log  main;
-  
-    sendfile        on;
-    #tcp_nopush     on;
-  
-    #keepalive_timeout  0;
-    keepalive_timeout  65;
-  
-    gzip  on;
-  
-  
-    tfs_upstream tfs_rc {
-        server 10.1.240.124:8100;
-        type ns;
-        rcs_zone name=tfs1 size=128M;
-        rcs_interface eth0;
-        rcs_heartbeat lock_file=/usr/local/nginx/logs/lk.file interval=10s;
-    }
-  
-    server {
-          listen       80;
-          server_name  localhost;
-  
-          tfs_keepalive max_cached=100 bucket_count=10;
-          #tfs_log "pipe:/usr/local/cronolog/sbin/ -p 30min /path/to/nginx/logs/cronolog/%Y/%m/%Y-%m-%d-%H-%M-tfs_access.log";
-  
-          location / {
-              tfs_pass tfs://tfs_rc;
-          }
-    }
-}
-
-API接口测试
-细节参看这里：https://github.com/alibaba/nginx-tfs/blob/master/TFS_RESTful_API.markdown
-
-
-模拟POST上传一个图片：
-curl --data-binary @/root/1.jpg http://10.1.240.124:80/v1/tfs?suffix=.jpg\&simple_name=0
-
-返回信息：
-{
-"TFS_FILE_NAME": "T1iRJTByJT1RXrhCrK"
-}
-
-浏览器打开查看
-http://10.1.240.124:80/v1/tfs/T1iRJTByJT1RXrhCrK.jpg(tfs三个字符可以用任意字符代替，例如一个空格字符，或者aaaa,bbb等，但至少需要存在一个字符)
-
---配置rs信息
-insert into t_meta_root_info (app_id, addr_info, stat, rem, create_time, modify_time) values (1, '10.1.240.124:3500', 1, 'test first', now(), now());
---更新生效
-insert into t_base_info_update_time (base_last_update_time, app_last_update_time) values (now(), now())  
-以下配置可以拿到appid
-http://10.1.240.124/v2/tfs1/appid
-vi /usr/local/nginx/conf/nginx.conf
-# cat /usr/local/nginx/conf/nginx.conf
-user nobody;
-worker_processes 2;
-
-#error_log logs/error.log;
-#error_log logs/error.log notice;
-error_log logs/error.log info;
-
-pid logs/nginx.pid;
-
-
-events {
-worker_connections 10240;
-}
-
-
-http {
-include mime.types;
-default_type application/octet-stream;
-
-log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-'$status $body_bytes_sent "$http_referer" '
-'"$http_user_agent" "$http_x_forwarded_for"';
-
-#access_log logs/access.log main;
-
-sendfile on;
-#tcp_nopush on;
-
-#keepalive_timeout 0;
-keepalive_timeout 65;
-
-gzip on;
-
-
-tfs_upstream tfs_rc {
-server 10.1.240.124:5100;
-type rcs;
-rcs_zone name=tfs1 size=128M;
-rcs_interface eth0;
-rcs_heartbeat lock_file=/usr/local/nginx/logs/lk.file interval=10s;
-}
-
-server {
-listen 80;
-server_name localhost;
-
-tfs_keepalive max_cached=100 bucket_count=10;
-#tfs_log "pipe:/usr/local/cronolog/sbin/ -p 30min /path/to/nginx/logs/cronolog/%Y/%m/%Y-%m-%d-%H-%M-tfs_access.log";
-
-location / {
-tfs_pass tfs://tfs_rc;
-}
-}
-}
-
-./tfs start_ns
-./tfs start_rc
-./tfs start_ds 2
-./tfs admin_ns
-./tfs admin_ds
-./tfs start_rs
-./tfs start_meta
+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
+PIOozp0mVQudTWSUmAi8m8QBZmNl+IZRDHXYlXwWqhlnnYnbsMOjrvpqFRXBaJnG
+LPVpc2TqyzQtU3OGfUaAwpKvBwHxoXdHPUrYaVrmyL3BcQ1JI9XDQzfsEYNPvYUG
+1Y8mp5Lp9bYsA3ViTIXLR8zV/B8iO65HIv0i1LpJS9VTmTxG8tcSj8/ma/Rg073i
+6emI/hXIMb5U35Oq6UXXY7YoUHsVsv44lmhKO2WISfr2l1UlQGbnhbmivMcQcLqu
+JsXVj6n/OnyG7tIsC5FsHH8ntycE+7e3j6bTFcnGkN6kiyIb+SpccY17gxlEoxgA
+rm/cNRmXlPwAZE2gGMWcoCLGz/rVlZ8x5MJyl2+QQsXh5sZ6p8SX/Q5iKmRjzM7Y
+loSG+hHaeivat+Gv4QT6L21zwtj+9twC4sGnfowTdto16QkSbPYVPNCcXJza4JcM
+vBa5ZtSgmmOb8M0+w6rd5CKnotFm4W4zsZKSLOjmIp/+iAj5t9TIRRTHobnQTBt+
+Uc6PNmx3nOrvz16VaVpM5djNFf80FQ4L+bm4aJMfzEp9KQQRjE3McftmDfQO4V5i
+ToZ+5hn78VqK89cp5HvkUZ2aERYqBC6NpOsOEzC19+jfJD9iE9j1qWBtu2JMCYfK
+202W9gf8ENoOHo8xQT1ZI8Xv2NzuG+AVGEUtScVyNH0Fu5p4wt3NHv/0gH/6k8lD
+P6N9vEd1Y+/r/a8lRdNsnWXvp40eJlmWnT25sKwOlutvkls/bvhPS4b9/9oYmB0T
+PBUaBTEw3wQVUa3I1+r1UOxN4EEuzOTJ8HXUcLyQDAStMRrHkMPbI5E3LMZ4PiwI
+LsbNcL4TiUHgZiuZN0BHJWuQAoIvbp85Zri2aEzNptcZMc2xm7EnoeJbkGD6d4V9
+GdyKrh3QV3QHj2e6Y2t2Xds4xIWUXFQLHmo8OAJEZmiUPQKOYks+haqJdCZ2jJbG
+ayidZpxlrFXUbhTX8VPlSTdn7MVZDYIbzv1wJUbNcRkZaK8uF23wuN/AuXgvNUDF
+1EhWzqc20KrOvN+MKmTymE/LK6QAfVU2gax2+giYmtnkxXDHlDoLepB/OVwVquhf
+WJKgeFCYeUo0T6jRGBcjEO/oSn5vGwJ/nqQ4ujFhklIdsa+1b13v9D4s85+s6mmj
+f0R6NvnZmNY4XHATxAIzAR2Wo43Yhr8IH+MhEQyvyNRzT2APjhUrphinBt6N6ck8
++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
