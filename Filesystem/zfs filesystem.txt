@@ -1,26 +1,53 @@
-U2FsdGVkX1+6l6KKufr8Xg3Rb2cU6m4iahJRwcVx1mpM8LhIiwsZqmeHmn5qmCkY
-IBmNHx8PXRl06gWTrT15UPDco66kz2e4rEvLQWnY+/Z2p5Arp+CCndqFe5l/mYUw
-BbLe0/Advz5yyowQk9nKVbHQvWJJbVsjSPsA25pNVBV13wrFdbLqB/ZKJ16qzFPp
-esEGv0Dukckcu30CbWr2ghJrqg4ei/izYRaNju9NcFGT0ok+9XhrlHE39z6U/iSQ
-qQeCp4td4EyffIiZ/DZsNYUASwdQLrRkhv8jIgUyR9rZQhdagVophV9xD8P9fkLk
-hOJv6AorVL4EurvQ+WRM/wPDcTrBjL1ak9CdN/r3Gh7imWSYxOr4wGiEV5HPv7Lq
-zhMRmYADlrpVAqlzV5lnoqC7rnY7nKHlFGvWDGQ5XeVEdbLX3E8bsJiokW2TKj4B
-tKrV8m2bdHUtJE7zlwAuWnXqlBNiW01E7AkHzuHb3psuwfiijNo+lZwo+h9zxXyK
-RcV76Oxny/4Wyk2VKFdOXFi9WU+Vg9oV0WUTAemBH7DFeHA51zSgMt/LP9vRjZmy
-uefPTt6qQDVpffID/bqxd+ehh4dEczQMwMXd5Tiqzy8r0DJUlAso46O1vX3ZXMEx
-bZbCxCALODGDhtcYl1j+Esnbl27M0gwsHwC1gFXuXWcVHn8YD/toXbxSf1l5wxlB
-NLvVlWZB4Yr/MgHTRWuFTRMXdW3Tv8h3ABVoaaJu1/moleW8Z8gOvXdz0AqS2yFB
-AV+5zfqg4V4i1tKmxCI5FSOIke1YK1ZWZsxZbenzrqJ2W4fQRqeHnVoJIi74ZN7V
-QPHp+Y0uaNq2bLS2YGB5phISnk/W5ADHExhsiCNtc4sCrC/Osw9qNmBTK9gWLrgG
-GKFWLP+0THw7TDrOZiBkLlIhFpTiYeVG2m54umO92cn+RWxn1El/U6zb9pCmiAFc
-EfTHCsRs1JA/gbjbkGZ6u/jhFtGEF/6j2TKf+FAXVbKq+jJ6lWHCahZtF3tvFV4S
-dOli0fKGuqvVnAUAHLl2UECOcC5or2aFqFrf/186mGP0oUtU2yARQP9YS9tr4AeH
-ESYx+0lqGi29IOHe96Aw9OAyf+wlKOcZTexTNYc3wYkivcHGEoa1rQVwSb9m1Q5P
-nGKVuRtZnbzgVzt4weprb+znGU02pJIC9MbWaD1uQSNSftV50Oty6XXcjB2kZYhA
-EOySK414pg1xeRHJ9uy6DrDB+nbfHgcMlcU34QX6fNw7YbChufadadV57odeojS1
-xVbeHCHwgCiYhZ5SwtoIWc51ApnlMnDoWqXcA73db1HTHhEuResvijgfJud1fNue
-A5qepUDu8mpH+krJrP78p6F3HZTQVbHXzDI3CJOgfz0PLy8rpEerJRr3Q9Z5aK17
-u1EXhAieGRLHK6yC6IVCo0f2OpOaBqRK8wX/DnfxU4xdo8tAPqYYvJD7ONBk+WUN
-3ZzZjU7J4jFxLrUogbqFtQ7lhPohasYniR2JI7+YmL18JTNYr6OqKsXNZAZWUmbi
-prgUY0K5digRJ0pAJYTy71oTbry4VT1HHHujtDDjGvZKHo3RrEzkmmWKRFZZg3qn
-iBCoVnadQPLucSZJIynvghRPf8PmLHhSp3gr8tXA5q8=
+yum -y install http://archive.zfsonlinux.org/epel/zfs-release.el7.noarch.rpm
+yum install -y zfs
+
+mkdir zfstest
+cd zfstest/
+
+使用块设备建立zpool
+dd if=/dev/zero of=disk1.img bs=64M count=1
+dd if=/dev/zero of=disk2.img bs=64M count=1
+dd if=/dev/zero of=disk3.img bs=64M count=1
+dd if=/dev/zero of=disk4.img bs=64M count=1
+
+losetup /dev/loop0 ./disk1.img
+losetup /dev/loop1 ./disk2.img 
+losetup /dev/loop2 ./disk3.img 
+losetup /dev/loop3 ./disk4.img
+
+/sbin/modprobe zfs
+zpool create myzpool raidz /dev/loop0 /dev/loop1 /dev/loop2 /dev/loop3
+zfs list
+
+#查看存储池的属性
+zfs get all myzpool
+
+#ZFS 压缩
+zfs create myzpool/myzdev
+zfs list
+zfs set compression=on myzpool/myzdev
+ls /myzpool/myzdev/
+cp ../openvswitch-2.5.0.tar.gz /myzpool/myzdev/
+
+ll /myzpool/myzdev/ -h
+ll .. -h
+
+du -ah /myzpool/myzdev/
+zfs get compressratio myzpool
+
+#检查池状态
+zpool status myzpool
+
+#zfs 具有自修复功能
+测试：
+dd if=/dev/zero of=disk4.img bs=64M count=1
+zpool scrub myzpool
+zpool status myzpool
+
+#使用zpool replace 修复池
+dd if=/dev/zero of=disk5.img bs=64M count=1
+losetup /dev/loop4 ./disk5.img 
+zpool replace myzpool loop3 loop4
+zpool status myzpool
+zpool scrub myzpool
+zpool status myzpool
