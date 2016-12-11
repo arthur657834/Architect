@@ -1,4 +1,5 @@
 http://docs.openstack.org/developer/swift/policies_saio.html
+https://my.oschina.net/FrankXin/blog/632800
 
 wget https://bitbucket.org/tsg-/liberasurecode/downloads/liberasurecode-1.1.0.tar.gz
 
@@ -8,10 +9,13 @@ cd liberasurecode-1.1.0
 make
 make install
 
+#记得下载openstack对应版本
 #还是yum好用
 yum -y install ftp://ftp.muug.mb.ca/mirror/centos/7.2.1511/cloud/x86_64/openstack-liberty/common/liberasurecode-1.0.9-3.el7.x86_64.rpm ftp://ftp.muug.mb.ca/mirror/centos/7.2.1511/cloud/x86_64/openstack-liberty/common/liberasurecode-devel-1.0.9-3.el7.x86_64.rpm
 
-yum -y install python34-setuptools
+yum -y install ftp://ftp.muug.mb.ca/mirror/centos/7.3.1611/cloud/x86_64/openstack-newton/common/liberasurecode-1.1.1-1.el7.x86_64.rpm ftp://ftp.muug.mb.ca/mirror/centos/7.3.1611/cloud/x86_64/openstack-newton/common/liberasurecode-devel-1.1.1-1.el7.x86_64.rpm
+
+yum -y install python34-setuptools openssl-devel
 pip install distribute
 pip install --upgrade setuptools
 
@@ -47,22 +51,21 @@ chown -R ${USER}:${USER} /var/run/swift
 for x in {1..4}; do sudo chown -R ${USER}:${USER} /srv/$x/; done
 				 
 				 
-
+vi /etc/rc.local
 mkdir -p /var/cache/swift /var/cache/swift2 /var/cache/swift3 /var/cache/swift4
 chown <your-user-name>:<your-group-name> /var/cache/swift*
 mkdir -p /var/run/swift
-chown <your-user-name>:<your-group-name> /var/run/swift
+#chown <your-user-name>:<your-group-name> /var/run/swift
+chown root:root /var/run/swift
 
 cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
+
 cd $HOME/python-swiftclient; sudo pip install -r requirements.txt; sudo python setup.py develop; cd -
 
-
 git clone https://github.com/openstack/swift.git
-cd $HOME/swift
-pip install -r requirements.txt
-pip install -r test-requirements.txt
-python setup.py develop
-
+cd $HOME/swift; sudo pip install -r requirements.txt; sudo python setup.py develop; cd -
+pip install -U xattr
+cd $HOME/swift; sudo pip install -r test-requirements.txt
 
 vi /etc/xinetd.d/rsync
 service rsync
@@ -76,8 +79,9 @@ service rsync
         log_on_failure  += USERID
 }
 
-sudo cp $HOME/swift/doc/saio/rsyncd.conf /etc/
-sudo sed -i "s/<your-user-name>/${USER}/" /etc/rsyncd.conf
+
+yes | cp $HOME/swift/doc/saio/rsyncd.conf /etc/
+sed -i "s/<your-user-name>/${USER}/" /etc/rsyncd.conf
 
 sudo systemctl restart xinetd.service
 sudo systemctl enable rsyncd.service
@@ -93,6 +97,7 @@ systemctl start memcached.service
 cp $HOME/swift/doc/saio/rsyslog.d/10-swift.conf /etc/rsyslog.d/
 
 vi /etc/rsyslog.conf
+usually in the “GLOBAL DIRECTIVES” section
 + $PrivDropToGroup adm
 
 mkdir -p /var/log/swift/hourly
@@ -107,6 +112,379 @@ rm -rf /etc/swift
 cd $HOME/swift/doc; sudo cp -r saio/swift /etc/swift; cd -
 chown -R ${USER}:${USER} /etc/swift
 find /etc/swift/ -name \*.conf | xargs sudo sed -i "s/<your-user-name>/${USER}/"
+
+cat /etc/swift/swift.conf
+[swift-hash]
+# random unique strings that can never change (DO NOT LOSE)
+# Use only printable chars (python -c "import string; print(string.printable)")
+swift_hash_path_prefix = changeme
+swift_hash_path_suffix = changeme
+
+[storage-policy:0]
+name = gold
+policy_type = replication
+default = yes
+
+[storage-policy:1]
+name = silver
+policy_type = replication
+
+[storage-policy:2]
+name = ec42
+policy_type = erasure_coding
+ec_type = liberasurecode_rs_vand
+ec_num_data_fragments = 4
+ec_num_parity_fragments = 2
+
+cat /etc/swift/proxy-server.conf 
+检查user = <your-user-name>
+
+cat /etc/swift/object-expirer.conf
+检查user = <your-user-name>
+
+cat /etc/swift/container-reconciler.conf
+检查user = <your-user-name>
+
+cat /etc/swift/container-sync-realms.conf
+[saio]
+key = changeme
+key2 = changeme
+cluster_saio_endpoint = http://127.0.0.1:8080/v1/
+
+cat /etc/swift/account-server/1.conf
+[DEFAULT]
+devices = /srv/1/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6012
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL2
+recon_cache_path = /var/cache/swift
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon account-server
+
+[app:account-server]
+use = egg:swift#account
+
+[filter:recon]
+use = egg:swift#recon
+
+[account-replicator]
+rsync_module = {replication_ip}::account{replication_port}
+
+[account-auditor]
+
+[account-reaper]
+
+cat /etc/swift/container-server/1.conf
+[DEFAULT]
+devices = /srv/1/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6011
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL2
+recon_cache_path = /var/cache/swift
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon container-server
+
+[app:container-server]
+use = egg:swift#container
+
+[filter:recon]
+use = egg:swift#recon
+
+[container-replicator]
+rsync_module = {replication_ip}::container{replication_port}
+
+[container-updater]
+
+[container-auditor]
+
+[container-sync]
+
+cat /etc/swift/object-server/1.conf
+[DEFAULT]
+devices = /srv/1/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6010
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL2
+recon_cache_path = /var/cache/swift
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon object-server
+
+[app:object-server]
+use = egg:swift#object
+
+[filter:recon]
+use = egg:swift#recon
+
+[object-replicator]
+rsync_module = {replication_ip}::object{replication_port}
+
+[object-reconstructor]
+
+[object-updater]
+
+[object-auditor]
+
+cat /etc/swift/account-server/2.conf
+[DEFAULT]
+devices = /srv/2/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6022
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL3
+recon_cache_path = /var/cache/swift2
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon account-server
+
+[app:account-server]
+use = egg:swift#account
+
+[filter:recon]
+use = egg:swift#recon
+
+[account-replicator]
+rsync_module = {replication_ip}::account{replication_port}
+
+[account-auditor]
+
+[account-reaper]
+
+cat /etc/swift/container-server/2.conf
+[DEFAULT]
+devices = /srv/2/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6021
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL3
+recon_cache_path = /var/cache/swift2
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon container-server
+
+[app:container-server]
+use = egg:swift#container
+
+[filter:recon]
+use = egg:swift#recon
+
+[container-replicator]
+rsync_module = {replication_ip}::container{replication_port}
+
+[container-updater]
+
+[container-auditor]
+
+[container-sync]
+
+cat /etc/swift/object-server/2.conf
+[DEFAULT]
+devices = /srv/2/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6020
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL3
+recon_cache_path = /var/cache/swift2
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon object-server
+
+[app:object-server]
+use = egg:swift#object
+
+[filter:recon]
+use = egg:swift#recon
+
+[object-replicator]
+rsync_module = {replication_ip}::object{replication_port}
+
+[object-reconstructor]
+
+[object-updater]
+
+[object-auditor]
+
+cat /etc/swift/account-server/3.conf
+[DEFAULT]
+devices = /srv/3/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6032
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL4
+recon_cache_path = /var/cache/swift3
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon account-server
+
+[app:account-server]
+use = egg:swift#account
+
+[filter:recon]
+use = egg:swift#recon
+
+[account-replicator]
+rsync_module = {replication_ip}::account{replication_port}
+
+[account-auditor]
+
+[account-reaper]
+
+cat /etc/swift/object-server/3.conf
+[DEFAULT]
+devices = /srv/3/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6030
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL4
+recon_cache_path = /var/cache/swift3
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon object-server
+
+[app:object-server]
+use = egg:swift#object
+
+[filter:recon]
+use = egg:swift#recon
+
+[object-replicator]
+rsync_module = {replication_ip}::object{replication_port}
+
+[object-reconstructor]
+
+[object-updater]
+
+[object-auditor]
+
+cat /etc/swift/account-server/4.conf
+[DEFAULT]
+devices = /srv/4/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6042
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL5
+recon_cache_path = /var/cache/swift4
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon account-server
+
+[app:account-server]
+use = egg:swift#account
+
+[filter:recon]
+use = egg:swift#recon
+
+[account-replicator]
+rsync_module = {replication_ip}::account{replication_port}
+
+[account-auditor]
+
+[account-reaper]
+
+cat /etc/swift/container-server/4.conf
+[DEFAULT]
+devices = /srv/4/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6041
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL5
+recon_cache_path = /var/cache/swift4
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon container-server
+
+[app:container-server]
+use = egg:swift#container
+
+[filter:recon]
+use = egg:swift#recon
+
+[container-replicator]
+rsync_module = {replication_ip}::container{replication_port}
+
+[container-updater]
+
+[container-auditor]
+
+[container-sync]
+
+cat /etc/swift/object-server/4.conf
+[DEFAULT]
+devices = /srv/4/node
+mount_check = false
+disable_fallocate = true
+bind_ip = 127.0.0.1
+bind_port = 6040
+workers = 1
+user = <your-user-name>
+log_facility = LOG_LOCAL5
+recon_cache_path = /var/cache/swift4
+eventlet_debug = true
+
+[pipeline:main]
+pipeline = recon object-server
+
+[app:object-server]
+use = egg:swift#object
+
+[filter:recon]
+use = egg:swift#recon
+
+[object-replicator]
+rsync_module = {replication_ip}::object{replication_port}
+
+[object-reconstructor]
+
+[object-updater]
+
+[object-auditor]
+
+
 
 
 mkdir -p $HOME/bin
@@ -130,14 +508,27 @@ $HOME/swift/.unittests
 startmain
 
 curl -v -H 'X-Storage-User: test:tester' -H 'X-Storage-Pass: testing' http://127.0.0.1:8080/auth/v1.0
+
 curl -v -H 'X-Auth-Token: <token-from-x-auth-token-above>' <url-from-x-storage-url-above>
-
-curl -v -H 'X-Auth-Token: AUTH_tk40e95076adba407c82396ea0309b97e3' http://127.0.0.1:8080/v1/AUTH_test
-
-
-
+curl -v -H 'X-Auth-Token: AUTH_tk01e05cb42f3f470baa7f5a127fe0b378' http://127.0.0.1:8080/v1/AUTH_test
 
 swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing stat
+
+#创建container，创建一个名称为container_test的container（目录），注意使用当前的token。
+curl -X PUT -D -  -H "X-Auth_Token: AUTH_tk01e05cb42f3f470baa7f5a127fe0b378" http://127.0.0.1:8080/v1/AUTH_test/container_test
+
+#查看test用户的container列表，发现只有一个目录：container_test。
+swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing list
+ 
+#上传Object（文件），上传hello文件到container_test目录中。
+swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing upload container_test /root/hello
+ 
+#查看目录中的内容，查看container_test目录中的内容。
+swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing list container_test
+
+#下载Object（文件）下载container_test下的object
+swift -A http://127.0.0.1:8080/auth/v1.0 -U test:tester -K testing download  container_test
+
 
 $HOME/swift/.functests
 
