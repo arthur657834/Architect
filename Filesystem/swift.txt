@@ -484,9 +484,6 @@ rsync_module = {replication_ip}::object{replication_port}
 
 [object-auditor]
 
-
-
-
 mkdir -p $HOME/bin
 cd $HOME/swift/doc; cp saio/bin/* $HOME/bin; cd -
 chmod +x $HOME/bin/*
