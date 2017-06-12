@@ -1,7 +1,8 @@
 安装zk集群
+```sh 
 mkdir -p /data/zookeeper-250-2181/
 echo 1 > /data/zookeeper-250-2181/myid #一定要是数据存放目录
-
+```
 vi zoo.cfg
 添加如下配置
 maxClientCnxns=0
@@ -17,7 +18,10 @@ server.3=10.1.50.174:2890:3890
 
 bin/zkServer.sh start/stop/status
 
+安装3台
+
 安装dubbo
+```sh 
 git clone https://github.com/alibaba/dubbo
 mvn clean install package
 
@@ -25,7 +29,7 @@ tar zxvf dubbo-monitor-simple-2.5.4-SNAPSHOT-assembly.tar.gz
 vi conf/dubbo.properties
 dubbo.registry.address=zookeeper://10.1.50.250:2181?backup=10.1.50.186:2181,10.1.50.174:2181
 ./bin/start.sh
-
+```
 
 安装tomcat
 将dubbo-admin-2.5.4-SNAPSHOT.war放到webapps
