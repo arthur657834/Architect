@@ -27,7 +27,9 @@ cd /usr/local/disconf/source/
 mv application-demo.properties application.properties
 
 application.properties
-该文件中主要是配置了监控邮件发送和接受的服务器和邮箱地址
+该文件中主要是配置了监控邮件发送和接受的服务器和邮箱地址 
+注意要使邮件发送成功还得在disconf数据库的app表中增加emails字段的值
+
 zoo.properties
 主要修改里面的hosts，指定zookeeper集群的host的端口
 jdbc-mysql.properties
