@@ -1,3 +1,4 @@
+
 安装zk集群
 ```sh 
 mkdir -p /data/zookeeper-250-2181/
