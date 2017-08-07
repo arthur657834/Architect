@@ -37,3 +37,7 @@ dubbo.registry.address=zookeeper://10.1.50.250:2181?backup=10.1.50.186:2181,10.1
 启动tomcat
 
 访问地址:http://10.1.50.250:8080/dubbo-admin-2.5.4-SNAPSHOT/
+
+默认密码: root/root
+配置文件：
+/opt/apache-tomcat-9.0.0.M22/webapps/dubbo-admin-2.5.4-SNAPSHOT/WEB-INF/dubbo.properties
