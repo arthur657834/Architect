@@ -34,9 +34,10 @@ dubbo.registry.address=zookeeper://10.1.50.250:2181?backup=10.1.50.186:2181,10.1
 
 安装tomcat
 将dubbo-admin-2.5.4-SNAPSHOT.war放到webapps
+修改tomcat端口
 启动tomcat
 
-访问地址:http://10.1.50.250:8080/dubbo-admin-2.5.4-SNAPSHOT/
+访问地址:http://10.1.50.250:8989/dubbo-admin-2.5.4-SNAPSHOT/
 
 默认密码: root/root
 配置文件：
