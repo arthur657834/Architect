@@ -24,7 +24,7 @@ bin/zkServer.sh start/stop/status
 安装dubbo
 ```sh 
 git clone https://github.com/alibaba/dubbo.git
-mvn clean install package
+mvn clean install package -Dmaven.test.skip=true
 
 tar zxvf dubbo-monitor-simple-2.5.4-SNAPSHOT-assembly.tar.gz
 vi conf/dubbo.properties
