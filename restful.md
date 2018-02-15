@@ -38,7 +38,7 @@ Level3的Restful API，给使用者带来了很大的便利，使用者只需要
 * SOAP: Simple Object Access Protocol 
 
 ![restful2](restful2.jpeg)
-![rpc](rpc.jpeg)
+![rpc](RPC.jpeg)
 
 由于RESTful风格的服务是无状态的，认证机制尤为重要。
 * basic auth
