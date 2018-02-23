@@ -36,6 +36,7 @@ Brick server 数量是镜像数的倍数，兼具 distribute 和 replica 卷的�
 ### distribute stripe replica volume：分布式条带复制卷
 ![distribute_s_r](distribute_s_r.png)
 
+```
 yum install -y centos-release-gluster
 yum install -y glusterfs glusterfs-server glusterfs-fuse glusterfs-rdma
 
@@ -98,5 +99,5 @@ mkdir /mnt/glusterfs
 mount -t glusterfs 10.1.50.199:/gv0 /mnt/glusterfs
 mount -t fuse.glusterfs
 
-
+```
 
