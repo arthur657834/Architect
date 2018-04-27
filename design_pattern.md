@@ -44,3 +44,23 @@
 
 6. 合成复用原则（Composite Reuse Principle）
 > 尽量首先使用合成/聚合的方式，而不是使用继承。
+
+
+single responsibility principle:
+>不要存在多于一个导致类变更的原因
+
+open/close principle:
+>一个软件实体如类、模块和函数应该对扩展开放，对修改关闭
+
+liskov substitution principle:
+>任何基类出现的地方都应该可以无差别的使用子类替换。
+
+interface segregation principle:
+>客户端不应该被强迫地依赖那些根本用不上的方法。
+
+dependency inversion principle:
+>1. 抽象不应该依赖细节，细节应该依赖于抽象针对接口编程，不要针对现实编程）
+2. 高层模块不应该依赖底层模块，两个都应该依赖抽象
+
+Law of Demeter:
+>一个对象应该对其他对象保持最少的了解
