@@ -40,7 +40,7 @@ IO调用中有两个概念：
 
 用一张图总结5个IO模型是这样的：
 
-![socket] (socket.jpg)
+![socket](socket.jpg)
 
 select的几大缺点：
 1. 每次调用select，都需要把fd集合从用户态拷贝到内核态，这个开销在fd很多时会很大
